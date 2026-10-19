@@ -1,0 +1,23 @@
+CARNET DE DIVERSIFICATION : installer l'app sur le téléphone
+=============================================================
+
+Ce dossier contient l'app complète. Pour l'installer sur un téléphone, il faut d'abord la mettre en ligne (gratuit).
+
+1. Mettre l'app en ligne avec Netlify Drop
+   - Sur l'ordinateur, ouvrir https://app.netlify.com/drop
+   - Glisser ce dossier « app » entier dans la page.
+   - Netlify donne une adresse du type https://xxxx.netlify.app
+   - Créer un compte gratuit (proposé par la page) pour que le site ne soit pas supprimé au bout d'une heure.
+
+2. Installer l'app sur le téléphone
+   - iPhone : ouvrir l'adresse dans Safari, bouton Partager, puis « Sur l'écran d'accueil ».
+   - Android : ouvrir l'adresse dans Chrome, menu ⋮, puis « Installer l'application » (ou « Ajouter à l'écran d'accueil »).
+
+3. Utilisation
+   - L'app fonctionne hors ligne après la première ouverture.
+   - Les données (stock, aliments goûtés, menus modifiés) restent sur le téléphone.
+   - Panneau « Sauvegarde » : « Exporter » crée un fichier de sauvegarde, « Importer » le restaure (sur le même téléphone ou sur un autre).
+
+Mettre à jour l'app plus tard
+   - Remplacer les fichiers de ce dossier, augmenter VERSION dans sw.js (par ex. 'carnet-v2'),
+     puis glisser de nouveau le dossier sur le site dans Netlify (onglet « Deploys »).
