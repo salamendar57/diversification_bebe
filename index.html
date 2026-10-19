@@ -282,6 +282,13 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .backup{display:flex;flex-wrap:wrap;gap:8px}
+.steps{margin:0 0 12px;padding-left:20px;font-size:.88rem;display:flex;flex-direction:column;gap:6px}
+.steps a{color:var(--accent);font-weight:600}
+.sync-form{display:grid;grid-template-columns:1fr auto;gap:8px}
+.sync-form input{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:44px;min-width:0}
+.confirm{margin-top:12px;background:var(--surface-2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.confirm p{margin:0;font-size:.9rem}
+.status.err{color:var(--warn);font-weight:600}
 .btn.ghost{background:var(--surface-2);color:var(--ink)}
 .file-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
 .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
@@ -347,6 +354,32 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
         </form>
         <ul class="stock-list" id="stockList"></ul>
         <div class="status" id="status"></div>
+      </div>
+      <div class="panel" id="syncPanel">
+        <h2>Partage entre parents</h2>
+        <div id="syncOff">
+          <p class="hint">Synchronise le carnet entre vos deux téléphones grâce à un fichier privé sur votre compte GitHub.</p>
+          <ol class="steps">
+            <li><a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=Carnet%20de%20diversification" target="_blank" rel="noopener">Créer une clé sur GitHub</a> : seule la case « gist » est cochée. Choisissez « No expiration », puis « Generate token » en bas de page.</li>
+            <li>Copiez la clé (elle commence par « ghp_ ») et collez-la ici. Faites la même chose sur l’autre téléphone, avec la même clé.</li>
+          </ol>
+          <form class="sync-form" id="syncForm">
+            <input type="password" id="syncToken" placeholder="ghp_…" aria-label="Clé GitHub" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <button class="btn" type="submit">Connecter</button>
+          </form>
+        </div>
+        <div id="syncOn" hidden>
+          <p class="hint">Ce téléphone partage le carnet. Les modifications sont envoyées automatiquement et celles de l’autre parent arrivent à l’ouverture de l’app.</p>
+          <div class="backup">
+            <button type="button" class="btn" id="syncBtn">Synchroniser maintenant</button>
+            <button type="button" class="btn ghost" id="syncOffBtn">Déconnecter</button>
+          </div>
+          <div class="confirm" id="syncConfirm" hidden>
+            <p>Déconnecter ce téléphone ? Les données restent ici, mais ne seront plus partagées.</p>
+            <div class="backup"><button type="button" class="btn" id="syncOffYes">Déconnecter</button><button type="button" class="btn ghost" id="syncCancel">Annuler</button></div>
+          </div>
+        </div>
+        <div class="status" id="syncStatus" role="status"></div>
       </div>
       <details class="panel">
         <summary>Sauvegarde</summary>
@@ -512,7 +545,7 @@ const TODAY=iso(new Date());
 function normalize(d){
   const tasted = d.tasted && typeof d.tasted==='object' ? {...d.tasted} : Object.fromEntries(TASTED0.map(id=>[id,true]));
   const plan = Array.isArray(d.plan) ? d.plan.filter(id=>F[id]) : PLAN0.filter(id=>!tasted[id]);
-  return {start:d.start||TODAY, rhythm:d.rhythm||2, stock:{...(d.stock||{})}, done:JSON.parse(JSON.stringify(d.done||{})), tasted, plan, over:JSON.parse(JSON.stringify(d.over||{}))};
+  return {start:d.start||TODAY, rhythm:d.rhythm||2, stock:{...(d.stock||{})}, done:JSON.parse(JSON.stringify(d.done||{})), tasted, plan, over:JSON.parse(JSON.stringify(d.over||{})), meta:{...(d.meta||{})}};
 }
 let S = normalize({});
 const LS='carnet-diversification-v1';
@@ -939,10 +972,122 @@ $('start').addEventListener('change',e=>{ if(e.target.value){S.start=e.target.va
 $('rhythm').addEventListener('change',e=>{ S.rhythm=+e.target.value; save(); render(); });
 
 // ---------- Sauvegarde ----------
+// Chaque donnée est une « clé » horodatée (stock:carotte, done:2026-10-20…) pour fusionner deux appareils sans rien perdre.
+function flatten(s){
+  const f={start:JSON.stringify(s.start), rhythm:JSON.stringify(s.rhythm), plan:JSON.stringify(s.plan)};
+  Object.keys(s.stock).forEach(k=>{ if(s.stock[k]>0) f['stock:'+k]=JSON.stringify(s.stock[k]); });
+  Object.keys(s.tasted).forEach(k=>{ if(s.tasted[k]) f['tasted:'+k]='true'; });
+  Object.keys(s.done).forEach(k=>f['done:'+k]=JSON.stringify(s.done[k]));
+  Object.keys(s.over).forEach(k=>f['over:'+k]=JSON.stringify(s.over[k]));
+  return f;
+}
+function unflatten(f,meta){
+  const s={start:TODAY,rhythm:2,plan:[],stock:{},tasted:{},done:{},over:{},meta};
+  Object.keys(f).forEach(k=>{
+    const v=JSON.parse(f[k]), i=k.indexOf(':');
+    if(i<0) s[k]=v; else s[k.slice(0,i)][k.slice(i+1)]=v;
+  });
+  return normalize(s);
+}
+let PREV=flatten(S);
+function stamp(){
+  const now=Date.now(), cur=flatten(S);
+  new Set([...Object.keys(PREV),...Object.keys(cur)]).forEach(k=>{ if(PREV[k]!==cur[k]) S.meta[k]=now; });
+  PREV=cur;
+}
 function setStatus(t){ $('status').textContent=t; }
+function persist(){
+  try{ localStorage.setItem(LS,JSON.stringify(S)); return true; }
+  catch(e){ setStatus('Enregistrement impossible : le navigateur bloque le stockage (navigation privée ?).'); return false; }
+}
 function save(){
-  try{ localStorage.setItem(LS,JSON.stringify(S)); setStatus('Enregistré sur ce téléphone.'); }
-  catch(e){ setStatus('Enregistrement impossible : le navigateur bloque le stockage (navigation privée ?).'); }
+  stamp();
+  if(persist()) setStatus(SYNC?'Enregistré. Synchronisation…':'Enregistré sur ce téléphone.');
+  if(SYNC) scheduleSync();
+}
+
+// ---------- Synchronisation entre appareils (Gist GitHub privé) ----------
+const SYNC_LS=LS+'-sync', GIST_FILE='carnet-diversification.json', API='https://api.github.com';
+let SYNC=null, syncTimer=null, syncing=false, syncAgain=false;
+try{ SYNC=JSON.parse(localStorage.getItem(SYNC_LS)||'null'); }catch(e){}
+function gh(path,opts={}){
+  return fetch(API+path,{...opts,cache:'no-store',headers:{'Accept':'application/vnd.github+json','Authorization':'Bearer '+SYNC.token,...(opts.body?{'Content-Type':'application/json'}:{})}})
+    .then(async r=>{ if(!r.ok){ const e=new Error('http'); e.status=r.status; throw e; } return r.status===204?null:r.json(); });
+}
+// Fusion : pour chaque clé, la version la plus récente gagne (à égalité, celle du serveur)
+function merge(remote){
+  const lf=flatten(S), rf=flatten(remote), lm=S.meta, rm=remote.meta||{};
+  const f={}, meta={};
+  new Set([...Object.keys(lf),...Object.keys(rf),...Object.keys(lm),...Object.keys(rm)]).forEach(k=>{
+    const tl=lm[k]||0, tr=rm[k]||0, useRemote=tr>=tl;
+    const v=useRemote?rf[k]:lf[k];
+    if(v!==undefined) f[k]=v;
+    if(tl||tr) meta[k]=Math.max(tl,tr);
+  });
+  return unflatten(f,meta);
+}
+function scheduleSync(delay=1500){ clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,delay); }
+async function syncNow(){
+  if(!SYNC) return;
+  if(syncing){ syncAgain=true; return; }
+  syncing=true; syncTimer=null;
+  setSyncStatus('Synchronisation…');
+  try{
+    const g=await gh('/gists/'+SYNC.gistId);
+    const file=g.files&&g.files[GIST_FILE];
+    let content=file?file.content:null;
+    if(file && file.truncated) content=await fetch(file.raw_url,{cache:'no-store'}).then(r=>r.text());
+    const remote=content?normalize((JSON.parse(content)||{}).data||{}):null;
+    const before=JSON.stringify(flatten(S));
+    if(remote){ S=merge(remote); PREV=flatten(S); persist(); }
+    if(JSON.stringify(flatten(S))!==before) render();
+    const remoteFlat=remote?JSON.stringify([flatten(remote),remote.meta]):'';
+    if(JSON.stringify([flatten(S),S.meta])!==remoteFlat){
+      await gh('/gists/'+SYNC.gistId,{method:'PATCH',body:JSON.stringify({files:{[GIST_FILE]:{content:JSON.stringify({app:'carnet-diversification',version:2,updatedAt:new Date().toISOString(),data:S})}}})});
+    }
+    SYNC.last=Date.now(); localStorage.setItem(SYNC_LS,JSON.stringify(SYNC));
+    setStatus('Enregistré et synchronisé.');
+    setSyncStatus();
+  }catch(e){
+    if(e.status===401||e.status===403) setSyncStatus('La clé n’est plus valide (expirée ou supprimée). Déconnectez puis collez une nouvelle clé.',true);
+    else if(e.status===404) setSyncStatus('Le carnet partagé est introuvable. Déconnectez puis reconnectez-vous.',true);
+    else setSyncStatus('Pas de connexion : la synchronisation reprendra plus tard.',true);
+  }
+  syncing=false;
+  if(syncAgain){ syncAgain=false; scheduleSync(300); }
+}
+async function connectSync(token){
+  SYNC={token};
+  setSyncStatus('Connexion…');
+  try{
+    let gist=null;
+    for(let page=1; page<=5 && !gist; page++){
+      const list=await gh(`/gists?per_page=100&page=${page}`);
+      gist=list.find(g=>g.files && g.files[GIST_FILE]);
+      if(list.length<100) break;
+    }
+    if(!gist){
+      // Premier appareil : on crée le carnet partagé avec les données de ce téléphone
+      const now=Date.now(); Object.keys(flatten(S)).forEach(k=>S.meta[k]=now); persist();
+      gist=await gh('/gists',{method:'POST',body:JSON.stringify({description:'Carnet de diversification (données de l’app)',public:false,
+        files:{[GIST_FILE]:{content:JSON.stringify({app:'carnet-diversification',version:2,updatedAt:new Date().toISOString(),data:S})}}})});
+    }
+    SYNC.gistId=gist.id;
+    localStorage.setItem(SYNC_LS,JSON.stringify(SYNC));
+    $('syncToken').value='';
+    await syncNow();
+  }catch(e){
+    SYNC=null;
+    setSyncStatus(e.status===401?'Clé refusée par GitHub. Vérifiez que vous l’avez copiée en entier.':e.status===403||e.status===404?'Cette clé n’a pas l’autorisation « gist ». Créez-en une avec le lien ci-dessus.':'Connexion impossible. Vérifiez votre accès à internet.',true);
+  }
+}
+function setSyncStatus(msg,err){
+  $('syncOff').hidden=!!(SYNC&&SYNC.gistId);
+  $('syncOn').hidden=!(SYNC&&SYNC.gistId);
+  const last=SYNC&&SYNC.last?new Date(SYNC.last):null;
+  const txt=msg||(last?`Synchronisé ${iso(last)===TODAY?'aujourd’hui':'le '+nice(last)} à ${pad(last.getHours())}:${pad(last.getMinutes())}.`:'');
+  $('syncStatus').textContent=txt;
+  $('syncStatus').classList.toggle('err',!!err);
 }
 // Demande au navigateur de ne pas effacer les données de l'app
 try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
@@ -968,8 +1113,27 @@ $('importFile').addEventListener('change',async e=>{
   e.target.value='';
 });
 
+$('syncForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const t=$('syncToken').value.trim();
+  if(!t){ setSyncStatus('Collez d’abord la clé créée sur GitHub.',true); return; }
+  connectSync(t);
+});
+$('syncBtn').addEventListener('click',()=>syncNow());
+$('syncOffBtn').addEventListener('click',()=>{ $('syncConfirm').hidden=false; $('syncOffYes').focus(); });
+$('syncOffYes').addEventListener('click',()=>{
+  SYNC=null; try{localStorage.removeItem(SYNC_LS)}catch(e){}
+  $('syncConfirm').hidden=true;
+  setSyncStatus('Déconnecté. Les données restent sur ce téléphone.');
+});
+$('syncCancel').addEventListener('click',()=>{ $('syncConfirm').hidden=true; $('syncOffBtn').focus(); });
+
 render();
 save();
+setSyncStatus();
+if(SYNC && SYNC.gistId) syncNow();
+window.addEventListener('online',()=>{ if(SYNC && SYNC.gistId) syncNow(); });
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && iso(new Date())===TODAY && SYNC && SYNC.gistId) scheduleSync(200); });
 setTimeout(()=>{const c=$('current'); if(c && TAB==='cal' && !MQ.matches) c.scrollIntoView({block:'start'});},50);
 
 // ---------- Hors ligne ----------
