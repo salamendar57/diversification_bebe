@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Carnet de diversification</title>
+<meta name="description" content="Menus quotidiens pour finir la diversification de bébé, stock de portions et aliments goûtés.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#2c6e8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Diversif'">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: progression par catégorie, onglets Calendrier / Aliments goûtés (gauche) + panneau préparation/stock (droite), empilés sur mobile */
+:root{
+  --bg:#f3f6f4; --surface:#ffffff; --surface-2:#e8eeea; --ink:#1f2b27; --muted:#5f6f69; --line:#d5ded9;
+  --accent:#2c6e8a; --accent-ink:#ffffff; --accent-soft:#dcebf2;
+  --leg:#3f8f5a; --prot:#c0506e; --fec:#b9862a; --fruit:#7b4fb0; --lait:#3a7cc4; --extra:#6c7a74;
+  --today:#f2b33d; --ok:#2f8a57; --warn:#b5651d;
+  --font-display:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141b19; --surface:#1c2522; --surface-2:#25302c; --ink:#e7efeb; --muted:#9db0a8; --line:#33413c;
+  --accent:#6fb6d6; --accent-ink:#0d1a20; --accent-soft:#1d3440;
+  --leg:#6cc488; --prot:#ec8aa3; --fec:#e0b25a; --fruit:#b592e0; --lait:#7fb2ea; --extra:#a3b2ac;
+  --today:#f2b33d; --ok:#5fc48a; --warn:#e5975a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141b19; --surface:#1c2522; --surface-2:#25302c; --ink:#e7efeb; --muted:#9db0a8; --line:#33413c;
+  --accent:#6fb6d6; --accent-ink:#0d1a20; --accent-soft:#1d3440;
+  --leg:#6cc488; --prot:#ec8aa3; --fec:#e0b25a; --fruit:#b592e0; --lait:#7fb2ea; --extra:#a3b2ac;
+  --today:#f2b33d; --ok:#5fc48a; --warn:#e5975a; color-scheme:dark}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0;-webkit-text-size-adjust:100%;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--font-display);font-weight:600;text-wrap:balance;margin:0}
+h1{font-size:2rem;letter-spacing:-.01em}
+h2{font-size:1.2rem}
+.sub{color:var(--muted);margin:4px 0 0;max-width:65ch}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* En-tête */
+.top{display:grid;grid-template-columns:1fr auto;gap:16px 24px;align-items:end;margin-bottom:18px}
+.settings{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+input[type=date],input[type=number],select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:38px}
+
+/* Progression */
+.progress{grid-column:1/-1;display:flex;flex-direction:column;gap:10px}
+.pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pcard-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pcard-h span{display:inline-flex;align-items:center;gap:7px;font-weight:600}
+.pcard-h b{font-family:var(--font-display);font-size:1.35rem;font-weight:600;font-variant-numeric:tabular-nums}
+.pcard-s{font-size:.82rem;color:var(--muted)}
+.bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;width:auto}
+.c-al{background:var(--warn)}
+.al-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.al{border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.al span{font-size:.85rem;font-weight:600;overflow-wrap:anywhere}
+.al small{font-size:.72rem;color:var(--muted)}
+.al.ok{background:var(--surface-2);border-color:transparent}
+.al.ok small{color:var(--ok);font-weight:600}
+.al.ok small::before{content:"✓ "}
+.al.cur{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.al.cur small{color:var(--accent);font-weight:600}
+.al.np{border-style:dashed}
+.progress .meta{color:var(--muted);font-size:.88rem}
+.legend{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+/* Onglets */
+.tabs{display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:8px 12px;cursor:pointer;font-weight:600;color:var(--muted);margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+/* Grille principale */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start}
+.side{display:flex;flex-direction:column;gap:16px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - env(safe-area-inset-top,0px) - 24px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.panel h2{margin-bottom:4px}
+.panel .hint{color:var(--muted);font-size:.85rem;margin:0 0 12px}
+details.panel>summary{cursor:pointer;font-family:var(--font-display);font-size:1.2rem;font-weight:600;list-style:none}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel[open]>summary{margin-bottom:10px}
+
+/* Semaines */
+.weeks{display:flex;flex-direction:column;gap:14px}
+details.week>summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:baseline;padding:6px 2px;font-family:var(--font-display);font-size:1.05rem}
+details.week>summary::-webkit-details-marker{display:none}
+details.week>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.week[open]>summary::before{transform:rotate(90deg)}
+details.week>summary small{font-family:var(--font-body);color:var(--muted);font-size:.85rem}
+.days{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:6px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 11px 11px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.day.is-today{border-color:var(--today);box-shadow:0 0 0 2px var(--today) inset}
+.day.is-done{background:var(--surface-2)}
+.day.is-past:not(.is-done){opacity:.72}
+.day-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.day-h b{font-weight:700}
+.day-h span{font-size:.75rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.meal{display:flex;flex-direction:column;gap:4px}
+.meal-l{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.item{display:flex;align-items:center;gap:6px;font-size:.9rem;min-width:0}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--extra);display:inline-block}
+.c-leg{background:var(--leg)}.c-prot{background:var(--prot)}.c-fec{background:var(--fec)}.c-fruit{background:var(--fruit)}.c-lait{background:var(--lait)}
+.item .name{overflow-wrap:anywhere}
+.tag{font-size:.66rem;font-weight:700;letter-spacing:.04em;padding:1px 6px;border-radius:99px;flex:none;text-transform:uppercase}
+.tag.new{background:var(--accent);color:var(--accent-ink)}
+.tag.rep{background:var(--accent-soft);color:var(--ink)}
+.tag.stock{border:1px solid var(--ok);color:var(--ok)}
+.item.is-new .name{font-weight:700}
+.note{font-size:.78rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:6px 8px}
+.day.is-done .note{background:var(--bg)}
+.note.allergen{color:var(--warn)}
+.day.is-editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.edit-btn{align-self:flex-start;padding-left:0}
+.edited{font-style:normal;color:var(--accent);font-weight:600}
+.edit-row{display:flex;flex-direction:column;gap:2px;min-width:0}
+.edit-row label{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted)}
+.edit-row select{width:100%;min-width:0;min-height:34px;padding:5px 8px;font-size:.88rem}
+.edit-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.btn.sm{min-height:32px;padding:5px 12px;font-size:.85rem}
+.serve{margin-top:auto;display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted);cursor:pointer;user-select:none}
+.serve input{accent-color:var(--ok);width:16px;height:16px}
+
+/* Aliments goûtés */
+.checklist{display:flex;flex-direction:column;gap:14px}
+.cl-sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.cl-sec h2{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cl-sec h2 small{font-family:var(--font-body);font-size:.85rem;color:var(--muted);font-weight:500;margin-left:auto;font-variant-numeric:tabular-nums}
+.cl-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px 14px}
+.cl-item{display:flex;align-items:center;gap:8px;min-height:34px;border-bottom:1px solid var(--surface-2);min-width:0}
+.cl-item label{display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer}
+.cl-item input{accent-color:var(--ok);width:17px;height:17px;flex:none}
+.cl-item .nm{overflow-wrap:anywhere}
+.cl-item .star{color:var(--warn);font-weight:700}
+.cl-item .st{font-size:.74rem;color:var(--muted);white-space:nowrap}
+.cl-item .st.cur{color:var(--accent);font-weight:700}
+.cl-item .st.ok{color:var(--ok)}
+.link{background:none;border:0;padding:2px 4px;font-size:.74rem;font-weight:600;color:var(--accent);cursor:pointer;white-space:nowrap;border-radius:4px}
+.link:hover{text-decoration:underline}
+.cl-note{font-size:.82rem;color:var(--muted);margin:0}
+
+/* Stock */
+.add{display:grid;grid-template-columns:1fr 72px;gap:8px}
+.add select{grid-column:1/-1}
+.btn{border:0;border-radius:8px;padding:8px 12px;min-height:38px;cursor:pointer;font-weight:600;background:var(--accent);color:var(--accent-ink)}
+.stock-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.stock-list li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line)}
+.stock-list li:last-child{border-bottom:0}
+.qty{display:flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+.qty button{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);background:var(--surface);cursor:pointer;line-height:1}
+.qty output{min-width:2.2ch;text-align:center;font-weight:600}
+.muted{color:var(--muted)}
+.prep{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.prep li{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.9rem}
+.prep .n{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85rem}
+.prep .n.need{color:var(--warn);font-weight:600}
+.status{font-size:.78rem;color:var(--muted);margin-top:10px}
+.tips{font-size:.85rem;color:var(--muted);margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+
+@media (max-width:1100px){.al-list{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}}
+@media (max-width:900px){
+  .main{grid-template-columns:1fr}
+  .side{position:static;order:-1;max-height:none;overflow:visible}
+  .pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  h1{font-size:1.6rem}
+  .top{grid-template-columns:1fr}
+  .days{grid-template-columns:1fr 1fr}
+}
+@media (max-width:380px){.days{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.backup{display:flex;flex-wrap:wrap;gap:8px}
+.btn.ghost{background:var(--surface-2);color:var(--ink)}
+.file-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Carnet de diversification</h1>
+      <p class="sub">Un nouvel aliment à la fois, présenté plusieurs jours de suite. Le midi : légume, protéine, féculent. Au goûter : un fruit. Liste de référence : la fiche « a déjà goûté » de Cuisinez pour Bébé.</p>
+    </div>
+    <div class="settings">
+      <div class="field"><label for="start">Début du plan</label><input type="date" id="start"></div>
+      <div class="field"><label for="rhythm">Nouvel aliment tous les</label>
+        <select id="rhythm"><option value="2">2 jours</option><option value="3">3 jours</option></select></div>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="legend">
+      <span><i class="dot c-leg"></i>Légume</span><span><i class="dot c-prot"></i>Protéine</span><span><i class="dot c-fec"></i>Féculent</span>
+      <span><i class="dot c-fruit"></i>Fruit</span><span><i class="dot c-lait"></i>Laitage</span><span><i class="dot"></i>Complément</span>
+      <span><b class="tag new">Nouveau</b>1re fois</span><span><b class="tag stock">stock</b>pris dans le congélateur</span>
+    </div>
+  </header>
+
+  <div class="main">
+    <section>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" id="tab-cal" aria-controls="weeks" aria-selected="true">Calendrier</button>
+        <button class="tab" role="tab" id="tab-list" aria-controls="checklist" aria-selected="false">Aliments goûtés</button>
+      </div>
+      <div class="weeks" id="weeks" role="tabpanel" aria-labelledby="tab-cal"></div>
+      <div class="checklist" id="checklist" role="tabpanel" aria-labelledby="tab-list" hidden></div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <h2>À préparer cette semaine</h2>
+        <p class="hint">Portions nécessaires sur les 7 prochains jours, comparées au stock.</p>
+        <ul class="prep" id="prep"></ul>
+      </div>
+      <div class="panel">
+        <h2>Mon stock</h2>
+        <p class="hint">Portions déjà cuisinées (cubes, pots…). Elles sont placées en priorité dans les prochains menus.</p>
+        <form class="add" id="addForm">
+          <select id="addFood" aria-label="Aliment"></select>
+          <input type="number" id="addQty" min="1" max="99" value="6" aria-label="Nombre de portions">
+          <button class="btn" type="submit">Ajouter</button>
+        </form>
+        <ul class="stock-list" id="stockList"></ul>
+        <div class="status" id="status"></div>
+      </div>
+      <details class="panel">
+        <summary>Sauvegarde</summary>
+        <p class="hint">Vos données restent sur ce téléphone. Exportez-les de temps en temps pour ne rien perdre, ou pour les passer sur un autre appareil.</p>
+        <div class="backup">
+          <button type="button" class="btn" id="exportBtn">Exporter</button>
+          <label class="btn ghost file-btn">Importer<input type="file" id="importFile" accept="application/json,.json"></label>
+        </div>
+        <div class="status" id="backupStatus"></div>
+      </details>
+      <details class="panel">
+        <summary>Repères</summary>
+        <ul class="tips">
+          <li>Allergènes : un seul nouveau à la fois, en petite quantité, en journée et à la maison. Ensuite, en reproposer environ 1 fois par semaine.</li>
+          <li>Une réaction peut apparaître de quelques minutes à 72 h après. En cas de réaction sévère, appelez le 15.</li>
+          <li>Lait : déjà présent si bébé boit du lait infantile. Soja : déconseillé avant 3 ans (ANSES). Moutarde et lupin : seulement s'ils font partie de vos habitudes. Sulfites : additif, peu d'intérêt.</li>
+          <li>Viande ou poisson : 10 g par jour (2 c. à café), de préférence le midi. Œuf : 1/4 bien cuit.</li>
+          <li>1 c. à café d'huile (colza, noix, olive) dans la purée. Ni sel, ni sucre. Pas de miel avant 1 an.</li>
+          <li>Plan indicatif, à adapter avec votre pédiatre.</li>
+        </ul>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<script>
+// ---------- Catalogue (fiche « a déjà goûté » de Cuisinez pour Bébé) ----------
+// [id, nom, allergène, drapeau]  drapeau : 'np' = jamais proposé dans les menus
+const CATS = [
+  ['leg','Légumes',[
+    ['artichaut','Artichaut'],['asperge','Asperge'],['aubergine','Aubergine'],['betterave','Betterave'],['blette','Blette'],
+    ['brocoli','Brocoli'],['butternut','Butternut'],['carotte','Carotte'],['celeribr','Céleri-branche','celeri'],['celeri','Céleri-rave','celeri'],
+    ['champignons','Champignons'],['choublanc','Chou blanc'],['choubxl','Chou de Bruxelles'],['chourouge','Chou rouge'],['chouvert','Chou vert'],
+    ['choufleur','Chou-fleur'],['chourave','Chou-rave'],['citrouille','Citrouille'],['concombre','Concombre'],['courgette','Courgette'],
+    ['courgettej','Courgette jaune'],['endive','Endive'],['epinard','Épinards'],['fenouil','Fenouil'],['haricots','Haricots verts'],
+    ['mais','Maïs'],['navet','Navet'],['oignon','Oignon'],['panais','Panais'],['patisson','Pâtisson'],['petitspois','Petits pois'],
+    ['poireau','Poireau'],['poivron','Poivron'],['potimarron','Potimarron'],['potiron','Potiron'],['radis','Radis'],['rutabaga','Rutabaga'],
+    ['salade','Salade'],['salsifis','Salsifis'],['tomate','Tomate'],['topinambour','Topinambour']]],
+  ['fruit','Fruits',[
+    ['abricot','Abricot'],['ananas','Ananas'],['avocat','Avocat'],['banane','Banane'],['cassis','Cassis'],['cerises','Cerises'],
+    ['chataignes','Châtaignes'],['citron','Citron'],['clementine','Clémentine'],['coing','Coing'],['dattes','Dattes'],['figue','Figue'],
+    ['fraise','Fraise'],['framboise','Framboise'],['passion','Fruit de la passion'],['grenade','Grenade'],['groseille','Groseille'],
+    ['kaki','Kaki'],['kiwi','Kiwi'],['litchi','Litchi'],['mangue','Mangue'],['melon','Melon'],['mirabelle','Mirabelle'],['mure','Mûre'],
+    ['myrtille','Myrtille'],['nectarine','Nectarine'],['coco','Noix de coco'],['orange','Orange'],['pamplemousse','Pamplemousse'],
+    ['papaye','Papaye'],['pasteque','Pastèque'],['peche','Pêche'],['poire','Poire'],['pomme','Pomme'],['prune','Prune'],
+    ['pruneau','Pruneau'],['raisin','Raisin'],['rhubarbe','Rhubarbe']]],
+  ['fec','Féculents',[
+    ['maisdoux','Maïs doux'],['manioc','Manioc'],['patatedouce','Patate douce'],['pdt','Pomme de terre'],['ble','Blé (farine)','gluten'],
+    ['boulgour','Boulgour','gluten'],['pain','Pain','gluten'],['pates','Pâtes','gluten'],['semoule','Semoule','gluten'],['avoine','Avoine'],
+    ['millet','Millet'],['quinoa','Quinoa'],['polenta','Polenta'],['riz','Riz'],['sarrasin','Sarrasin'],['tapioca','Tapioca'],['feves','Fèves'],
+    ['lentillesv','Lentilles vertes'],['lentilles','Lentilles corail'],['haricotsb','Haricots blancs'],['haricotsr','Haricots rouges'],
+    ['poischiches','Pois chiches'],['poiscasses','Pois cassés']]],
+  ['prot','Protéines animales',[
+    ['oeuf','Œuf','oeuf'],['agneau','Agneau'],['boeuf','Bœuf'],['canard','Canard'],['dinde','Dinde'],['jambon','Jambon'],['lapin','Lapin'],
+    ['porc','Porc'],['poulet','Poulet'],['veau','Veau'],['abats','Abats',null,'np'],['boudin','Boudin noir',null,'np'],
+    ['cabillaud','Cabillaud','poisson'],['colin','Colin','poisson'],['crevette','Crevette','crustaces'],['eglefin','Églefin','poisson'],
+    ['lieu','Lieu jaune','poisson'],['limande','Limande','poisson'],['lotte','Lotte','poisson'],['maquereau','Maquereau','poisson'],
+    ['merlan','Merlan','poisson'],['moules','Moules','mollusques'],['stjacques','Noix de Saint-Jacques','mollusques'],
+    ['sardine','Sardine','poisson'],['saumon','Saumon','poisson'],['thon','Thon','poisson'],['truite','Truite','poisson']]],
+  ['herb','Herbes et épices',[
+    ['ail','Ail'],['cannelle','Cannelle'],['cumin','Cumin'],['curcuma','Curcuma'],['curry','Curry','moutarde'],['garam','Garam masala'],
+    ['gingembre','Gingembre'],['muscade','Muscade'],['paprika','Paprika'],['vanille','Vanille'],['aneth','Aneth'],['basilic','Basilic'],
+    ['ciboulette','Ciboulette'],['coriandre','Coriandre'],['estragon','Estragon'],['laurier','Laurier'],['menthe','Menthe'],['origan','Origan'],
+    ['persil','Persil'],['romarin','Romarin'],['sauge','Sauge'],['thym','Thym'],['verveine','Verveine']]],
+  ['autre','Autres',[
+    ['amande','Amandes','coque'],['cacahuete','Cacahuètes','arachide'],['chia','Graines de chia'],['lait','Lait','lait','np'],
+    ['noisette','Noisettes','coque'],['noix','Noix','coque'],['cajou','Noix de cajou','coque'],['sesame','Sésame','sesame'],
+    ['yaourt','Yaourt','lait'],['pavot','Pavot',null,'np'],['chocolat','Chocolat',null,'np'],['miel','Miel (pas avant 1 an)',null,'np']]]
+];
+// Place dans le menu : midi (leg/prot/fec + complément xm) ou goûter (fruit, laitage, complément xg)
+const SLOT_OVERRIDE = {amande:'xg',cacahuete:'xg',chia:'xg',noisette:'xg',noix:'xg',cajou:'xg',sesame:'xm',yaourt:'lait',lait:'lait',pavot:'xg',chocolat:'xg',miel:'xg'};
+const F = {}, ORDER = [];
+CATS.forEach(([c,,items])=>items.forEach(([id,n,al,flag])=>{
+  F[id]={id,n,c,al:al||null,np:flag==='np',slot:SLOT_OVERRIDE[id]||(c==='herb'?'xm':c)};
+  ORDER.push(id);
+}));
+const ALLERGENS = [
+  ['oeuf','Œuf'],['lait','Lait'],['arachide','Arachide'],['coque','Fruits à coque'],['gluten','Gluten'],
+  ['poisson','Poisson'],['crustaces','Crustacés'],['mollusques','Mollusques'],['celeri','Céleri'],['sesame','Sésame'],
+  ['soja','Soja','Déconseillé avant 3 ans (ANSES)'],['moutarde','Moutarde','Si dans vos habitudes'],['lupin','Lupin','Non prioritaire'],['sulfites','Sulfites','Additif, peu d’intérêt']
+];
+const AL_PRIORITY = ALLERGENS.filter(a=>!a[2]).length;
+const NOTES = {
+  poulet:'Commencer par 10 g (2 c. à café), mixé dans la purée.',
+  coing:'En compote, bien cuit. De saison en octobre.',
+  riz:'Bien cuit, mixé avec les légumes.',
+  oeuf:'Allergène : œuf dur bien cuit et finement mixé, 1 c. à café au début, puis 1/4 d’œuf.',
+  poireau:'Le blanc, bien cuit.',
+  kiwi:'Bien mûr, écrasé.',
+  pates:'Allergène (gluten) : petites pâtes bien cuites, dans la purée.',
+  yaourt:'Allergène (lait) : yaourt nature. Déjà exposé si bébé boit du lait infantile.',
+  patatedouce:'Bien cuite, en purée.',
+  clementine:'Quartiers sans peau, mixés.',
+  amande:'Allergène (fruits à coque) : 1/2 c. à café de purée d’amande ou de poudre dans une compote connue. Jamais entière.',
+  choufleur:'Bien cuit, en petite quantité au début.',
+  cabillaud:'Poisson : cuit vapeur, sans arêtes, finement mixé.',
+  lentilles:'Très bien cuites et mixées, en petite quantité.',
+  figue:'Bien mûre, écrasée.',
+  celeri:'Allergène (céleri) : bien cuit, dans la purée.',
+  boeuf:'Bien cuit, mixé.',
+  semoule:'Gluten : semoule fine dans la purée.',
+  raisin:'Pelé, épépiné et mixé. Jamais entier (risque d’étouffement).',
+  noisette:'Allergène (fruits à coque) : 1/2 c. à café de purée de noisette dans une compote. Jamais entière.',
+  potiron:'Bien cuit, en purée.',
+  quinoa:'Bien rincé avant cuisson.',
+  kaki:'Très mûr.',
+  sesame:'Allergène : un peu de purée de sésame (tahini) dans la purée.',
+  petitspois:'Mixés finement.',
+  chataignes:'En purée de châtaigne nature, sans sucre.',
+  colin:'Poisson : sans arêtes, bien cuit.',
+  poivron:'Pelé et bien cuit.',
+  jambon:'Jambon blanc découenné, sans nitrite, avec modération.',
+  avoine:'Flocons d’avoine fins, cuits dans l’eau ou le lait.',
+  framboise:'Surgelée hors saison, mixée.',
+  crevette:'Allergène (crustacés) : bien cuite, finement mixée.',
+  artichaut:'Le fond, bien cuit.',
+  orange:'Quartiers sans peau, mixés.',
+  poischiches:'En houmous maison, sans sel.',
+  myrtille:'Surgelée hors saison, mixée.',
+  pain:'Un quignon à mâchouiller, toujours sous surveillance.',
+  moules:'Allergène (mollusques) : bien cuites, finement mixées.',
+  noix:'Allergène (fruits à coque) : poudre de noix dans une compote. Jamais entière.',
+  truite:'Poisson : sans arêtes, bien cuite.'
+};
+// Ordre d'introduction par défaut : on alterne midi et goûter, allergènes espacés, fruits de saison en automne
+const PLAN0 = ['poulet','coing','riz','oeuf','poireau','kiwi','pates','yaourt','dinde','patatedouce','clementine','amande',
+  'choufleur','cabillaud','lentilles','figue','celeri','boeuf','semoule','raisin','noisette','potiron','quinoa','kaki',
+  'sesame','veau','petitspois','chataignes','colin','polenta','poivron','ananas','jambon','avoine','aubergine','framboise',
+  'crevette','artichaut','orange','lapin','poischiches','blette','myrtille','pain','agneau','sarrasin','moules','abricot','truite','noix'];
+const TASTED0 = ['betterave','brocoli','butternut','carotte','concombre','courgette','courgettej','epinard','fenouil','haricots',
+  'navet','panais','potimarron','radis','tomate','banane','fraise','mangue','melon','mirabelle','peche','poire','pomme','prune',
+  'rhubarbe','pdt','cacahuete','cajou','saumon'];
+
+// ---------- Dates ----------
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const DOW=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
+const MON=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+const nice=d=>`${d.getDate()} ${MON[d.getMonth()]}`;
+const TODAY=iso(new Date());
+
+// ---------- État ----------
+function normalize(d){
+  const tasted = d.tasted && typeof d.tasted==='object' ? {...d.tasted} : Object.fromEntries(TASTED0.map(id=>[id,true]));
+  const plan = Array.isArray(d.plan) ? d.plan.filter(id=>F[id]) : PLAN0.filter(id=>!tasted[id]);
+  return {start:d.start||TODAY, rhythm:d.rhythm||2, stock:{...(d.stock||{})}, done:JSON.parse(JSON.stringify(d.done||{})), tasted, plan, over:JSON.parse(JSON.stringify(d.over||{}))};
+}
+let S = normalize({});
+const LS='carnet-diversification-v1';
+try{const raw=localStorage.getItem(LS); if(raw) S=normalize(JSON.parse(raw))}catch(e){}
+let TAB='cal';
+try{TAB=localStorage.getItem(LS+'-tab')||'cal'}catch(e){}
+
+// Où en est-on dans le plan ?
+function planInfo(){
+  const R=+S.rhythm, N=S.plan.length, start=parse(S.start);
+  const elapsed=Math.floor((parse(TODAY)-start)/864e5);
+  const introduced = elapsed<0 ? 0 : Math.min(N, Math.floor(elapsed/R)+1);
+  const curIdx = elapsed>=0 && elapsed<N*R ? Math.floor(elapsed/R) : -1;
+  return {R,N,start,elapsed,introduced,curIdx};
+}
+function status(id,P){
+  if(S.tasted[id]) return 'ok';
+  const i=S.plan.indexOf(id);
+  if(i<0) return 'todo';
+  if(i===P.curIdx) return 'cur';
+  return i<P.introduced ? 'ok' : 'plan';
+}
+
+// ---------- Simulation du plan ----------
+function simulate(P){
+  const {R,N,start}=P, total=N*R+7;
+  const known=new Set(Object.keys(S.tasted).filter(id=>S.tasted[id]&&F[id]));
+  const vstock={...S.stock}, last={};
+  const days=[];
+  for(let d=0;d<total;d++){
+    const date=iso(addDays(start,d));
+    const block=Math.floor(d/R), rep=d%R;
+    const intro = block<N ? F[S.plan[block]] : null;
+    if(intro) known.add(intro.id);
+    const done=S.done[date];
+    if(done && done.menu){
+      const menu={midi:done.menu.midi.filter(it=>F[it.id]),gouter:done.menu.gouter.filter(it=>F[it.id])};
+      [...menu.midi,...menu.gouter].forEach(it=>last[it.id]=d);
+      days.push({d,date,intro,rep,menu,done:true});
+      continue;
+    }
+    const useStock = date>=TODAY;
+    const pick=slot=>{
+      const cands=[...known].filter(id=>F[id].slot===slot && !F[id].np && F[id].c!=='herb' && (!intro || id!==intro.id));
+      if(!cands.length) return null;
+      cands.sort((a,b)=>{
+        const sa=useStock&&vstock[a]>0?0:1, sb=useStock&&vstock[b]>0?0:1;
+        if(sa!==sb) return sa-sb;
+        return (last[a]??-1e9)-(last[b]??-1e9) || ORDER.indexOf(a)-ORDER.indexOf(b);
+      });
+      return cands[0];
+    };
+    const slot=s=> intro && intro.slot===s ? intro.id : null;
+    const sel={
+      leg: slot('leg')||pick('leg'),
+      prot: slot('prot')||pick('prot'),
+      fec: slot('fec')||pick('fec'),
+      xm: slot('xm')||(d%3===1?pick('xm'):null),
+      fruit: slot('fruit')||pick('fruit'),
+      lait: slot('lait')||(d%2===0?pick('lait'):null),
+      xg: slot('xg')||(d%3===0?pick('xg'):null)
+    };
+    // Modifications faites à la main pour ce jour ('' = rien)
+    const ov=S.over[date]||{};
+    Object.keys(ov).forEach(k=>{ if(k in sel && (ov[k]==='' || F[ov[k]])) sel[k]=ov[k]||null; });
+    const mk=k=>sel[k]?[{id:sel[k],slot:k}]:[];
+    const midi=[...mk('leg'),...mk('prot'),...mk('fec'),...mk('xm')];
+    const gouter=[...mk('fruit'),...mk('lait'),...mk('xg')];
+    [...midi,...gouter].forEach(it=>{
+      last[it.id]=d;
+      if(intro && it.id===intro.id){ it.intro=true; it.rep=rep; }
+      if(useStock && vstock[it.id]>0){ vstock[it.id]--; it.stock=true; }
+    });
+    days.push({d,date,intro,rep,menu:{midi,gouter},done:false,known:[...known],edited:Object.keys(ov).length>0});
+  }
+  return days;
+}
+
+// ---------- Rendu ----------
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const cls=c=>({leg:'c-leg',prot:'c-prot',fec:'c-fec',fruit:'c-fruit',lait:'c-lait'}[c]||'');
+const dotOf=id=>cls(F[id].slot==='lait'?'lait':F[id].c);
+const repLabel=r=>r===0?'<b class="tag new">Nouveau</b>':`<b class="tag rep">${r+1}e fois</b>`;
+function itemHTML(it){
+  const f=F[it.id];
+  return `<div class="item${it.intro&&it.rep===0?' is-new':''}"><i class="dot ${dotOf(it.id)}"></i><span class="name">${esc(f.n)}</span>${it.intro?repLabel(it.rep):''}${it.stock?'<b class="tag stock">stock</b>':''}</div>`;
+}
+
+// Édition d'un jour : un menu déroulant par place, avec les aliments déjà goûtés à cette date
+const SLOT_LABEL={leg:'Légume',prot:'Protéine',fec:'Féculent',xm:'Complément',fruit:'Fruit',lait:'Laitage',xg:'Complément'};
+let EDIT=null;
+function editRow(di,k){
+  const cur=[...di.menu.midi,...di.menu.gouter].find(it=>it.slot===k);
+  const ids=di.known.filter(id=>F[id].slot===k && !F[id].np).sort((a,b)=>F[a].n.localeCompare(F[b].n,'fr'));
+  if(cur && !ids.includes(cur.id)) ids.unshift(cur.id);
+  const opts=ids.map(id=>{
+    const st=S.stock[id]>0?` (stock : ${S.stock[id]})`:'';
+    const nw=di.intro&&di.intro.id===id?' (nouveau)':'';
+    return `<option value="${id}" ${cur&&cur.id===id?'selected':''}>${esc(F[id].n)}${nw}${st}</option>`;
+  }).join('');
+  const sid=`ov-${di.date}-${k}`;
+  return `<div class="edit-row"><label for="${sid}"><i class="dot ${cls(k==='lait'?'lait':k)}"></i>${SLOT_LABEL[k]}</label>
+    <select id="${sid}" data-ov="${di.date}" data-slot="${k}"><option value="" ${cur?'':'selected'}>Aucun</option>${opts}</select></div>`;
+}
+
+let DAYS=[];
+function render(){
+  $('start').value=S.start; $('rhythm').value=String(S.rhythm);
+  const P=planInfo();
+  DAYS=simulate(P);
+  renderProgress(P);
+  renderWeeks(P);
+  renderChecklist(P);
+  renderStock();
+  renderPrep();
+  setTab(TAB,false);
+}
+
+function renderProgress(P){
+  const end=addDays(P.start,P.N*P.R-1);
+  const cur = P.curIdx>=0 ? F[S.plan[P.curIdx]] : null;
+  const cats=[['leg','Légumes'],['fruit','Fruits'],['fec','Féculents'],['prot','Protéines']];
+  const catCards=cats.map(([c,label])=>{
+    const ids=ORDER.filter(id=>F[id].c===c);
+    const ok=ids.filter(id=>status(id,P)==='ok').length;
+    const curF=ids.find(id=>status(id,P)==='cur');
+    const next=S.plan.find((id,i)=>F[id].c===c && i>P.curIdx && status(id,P)==='plan');
+    return `<div class="pcard"><div class="pcard-h"><span><i class="dot ${cls(c)}"></i>${label}</span><b>${ok}/${ids.length}</b></div>
+      <div class="bar" role="progressbar" aria-label="${label}" aria-valuemin="0" aria-valuemax="${ids.length}" aria-valuenow="${ok}"><i class="${cls(c)}" style="width:${ok/ids.length*100}%"></i></div>
+      <div class="pcard-s">${curF?`En cours : <b>${esc(F[curF].n)}</b>`:next?`Prochain : ${esc(F[next].n)}`:'Rien de prévu'}</div></div>`;
+  }).join('');
+  let alOk=0;
+  const alChips=ALLERGENS.map(([g,label,why])=>{
+    const foods=ORDER.filter(id=>F[id].al===g);
+    const tested=foods.filter(id=>status(id,P)==='ok');
+    if(tested.length){
+      if(!why) alOk++;
+      return `<li class="al ok" title="Testé avec : ${esc(tested.map(id=>F[id].n).join(', '))}"><span>${label}</span><small>${esc(F[tested[0]].n)}</small></li>`;
+    }
+    const curF=foods.find(id=>status(id,P)==='cur');
+    if(curF) return `<li class="al cur"><span>${label}</span><small>en cours</small></li>`;
+    const i=S.plan.findIndex((id,k)=>F[id].al===g && k>P.curIdx);
+    if(i>=0) return `<li class="al" title="Avec : ${esc(F[S.plan[i]].n)}"><span>${label}</span><small>${nice(addDays(P.start,i*P.R))} · ${esc(F[S.plan[i]].n)}</small></li>`;
+    return `<li class="al${why?' np':''}"><span>${label}</span><small>${why||'à planifier'}</small></li>`;
+  }).join('');
+  $('progress').innerHTML=`<div class="pgrid">${catCards}</div>
+    <div class="pcard"><div class="pcard-h"><span><i class="dot c-al"></i>Allergènes majeurs</span><b>${alOk}/${AL_PRIORITY}</b></div>
+      <ul class="al-list">${alChips}</ul></div>
+    <div class="meta">${cur?`Nouvel aliment en cours : <b>${esc(cur.n)}</b> · `:''}${P.elapsed<0?'Début le '+nice(P.start)+' · ':''}${P.N?`dernier nouvel aliment prévu le ${nice(end)} ${end.getFullYear()}`:'aucun aliment dans le plan'}</div>`;
+}
+
+function renderWeeks(P){
+  if(!DAYS.length){ $('weeks').innerHTML='<p class="muted">Le plan est vide. Ajoutez des aliments depuis l’onglet « Aliments goûtés ».</p>'; return; }
+  const first=addDays(P.start,-((P.start.getDay()+6)%7));
+  const lastDay=addDays(P.start,DAYS.length-1);
+  const byDate=Object.fromEntries(DAYS.map(x=>[x.date,x]));
+  const t=parse(TODAY), todayMonday=iso(addDays(t,-((t.getDay()+6)%7)));
+  let html='', w=0;
+  for(let m=new Date(first); m<=lastDay; m=addDays(m,7), w++){
+    const mIso=iso(m), sun=addDays(m,6);
+    const isPast=iso(sun)<TODAY;
+    const intros=[];
+    let cards='';
+    for(let k=0;k<7;k++){
+      const dt=addDays(m,k), di=byDate[iso(dt)];
+      if(!di) continue;
+      if(di.intro && di.rep===0) intros.push(di.intro.n);
+      const note = di.intro && di.rep===0 && !di.done && NOTES[di.intro.id];
+      const introNote = note ? `<div class="note${di.intro.al?' allergen':''}">${esc(note)}</div>` : '';
+      const state=[di.date===TODAY?'is-today':'', di.done?'is-done':'', di.date<TODAY?'is-past':''].join(' ');
+      const editing = EDIT===di.date && !di.done;
+      const tools = di.done ? '' : editing
+        ? `<div class="edit-actions"><button type="button" class="btn sm" data-close="1">Terminé</button>${di.edited?`<button type="button" class="link" data-reset="${di.date}">Revenir au menu proposé</button>`:''}</div>`
+        : `<button type="button" class="link edit-btn" data-edit="${di.date}" aria-label="Modifier le menu du ${nice(dt)}">Modifier</button>`;
+      const meals = editing
+        ? `<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
+           <div class="meal"><span class="meal-l">Goûter</span>${['fruit','lait','xg'].map(k=>editRow(di,k)).join('')}</div>`
+        : `<div class="meal"><span class="meal-l">Midi</span>${di.menu.midi.map(itemHTML).join('')}</div>
+           <div class="meal"><span class="meal-l">Goûter</span>${di.menu.gouter.map(itemHTML).join('')}</div>`;
+      cards+=`<article class="day ${state}${editing?' is-editing':''}">
+        <div class="day-h"><b>${DOW[dt.getDay()]} ${nice(dt)}</b><span>${di.edited?'<em class="edited">modifié</em> · ':''}J${di.d+1}</span></div>
+        ${meals}
+        ${editing?'':introNote}
+        ${tools}
+        ${di.date<=TODAY?`<label class="serve"><input type="checkbox" data-serve="${di.date}" ${di.done?'checked':''}> ${di.done?'Servi':'Marquer servi'}</label>`:''}
+      </article>`;
+    }
+    const label = mIso===todayMonday ? 'Cette semaine' : `Semaine ${w+1}`;
+    html+=`<details class="week" ${isPast?'':'open'} ${mIso===todayMonday?'id="current"':''}>
+      <summary>${label} <small>${nice(m)} – ${nice(sun)}${intros.length?' · nouveau : '+intros.map(esc).join(', '):''}</small></summary>
+      <div class="days">${cards}</div></details>`;
+  }
+  $('weeks').innerHTML=html;
+}
+
+function renderChecklist(P){
+  const html=CATS.map(([c,label,items])=>{
+    const ok=items.filter(([id])=>status(id,P)==='ok').length;
+    const rows=items.map(([id])=>{
+      const f=F[id], st=status(id,P), i=S.plan.indexOf(id);
+      const auto = (st==='ok'||st==='cur') && !S.tasted[id];
+      let right='';
+      if(st==='cur') right='<span class="st cur">en cours</span>';
+      else if(auto) right='<span class="st ok">via le plan</span>';
+      else if(st==='plan') right=`<span class="st">${nice(addDays(P.start,i*P.R))}</span><button type="button" class="link" data-unplan="${id}" aria-label="Retirer ${esc(f.n)} du plan">retirer</button>`;
+      else if(st==='todo' && !f.np) right=`<button type="button" class="link" data-plan="${id}">+ au plan</button>`;
+      return `<li class="cl-item"><label><input type="checkbox" data-taste="${id}" ${st==='ok'||st==='cur'?'checked':''} ${auto?'disabled':''}>
+        <span class="nm">${esc(f.n)}${f.al?' <span class="star" title="Allergène majeur">*</span>':''}</span></label>${right}</li>`;
+    }).join('');
+    return `<section class="cl-sec"><h2><i class="dot ${cls(c)}"></i>${label}<small>${ok}/${items.length} goûtés</small></h2><ul class="cl-grid">${rows}</ul></section>`;
+  }).join('');
+  $('checklist').innerHTML=`<p class="cl-note">Cochez ce que bébé a déjà goûté. Les aliments cochés sortent du plan. « + au plan » ajoute un aliment à la fin du calendrier. * = allergène majeur.</p>`+html;
+}
+
+function stockFoods(){ return ORDER.filter(id=>F[id].c!=='herb' && !F[id].np); }
+function foodOptions(){
+  return CATS.filter(([c])=>c!=='herb').map(([c,label,items])=>`<optgroup label="${label}">${items.filter(([id])=>!F[id].np).map(([id])=>F[id]).sort((a,b)=>a.n.localeCompare(b.n,'fr')).map(f=>`<option value="${f.id}">${esc(f.n)}</option>`).join('')}</optgroup>`).join('');
+}
+function renderStock(){
+  const ids=Object.keys(S.stock).filter(id=>S.stock[id]>0 && F[id]).sort((a,b)=>F[a].n.localeCompare(F[b].n,'fr'));
+  $('stockList').innerHTML = ids.length ? ids.map(id=>`<li><i class="dot ${dotOf(id)}"></i><span>${esc(F[id].n)}</span>
+    <span class="qty"><button type="button" data-q="${id}" data-d="-1" aria-label="Retirer une portion de ${esc(F[id].n)}">−</button><output>${S.stock[id]}</output><button type="button" data-q="${id}" data-d="1" aria-label="Ajouter une portion de ${esc(F[id].n)}">+</button></span></li>`).join('')
+    : '<li class="muted" style="grid-template-columns:1fr">Aucune portion en stock. Ajoutez ce que vous avez déjà cuisiné.</li>';
+}
+function renderPrep(){
+  const lim=iso(addDays(parse(TODAY),6)), need={};
+  DAYS.filter(x=>x.date>=TODAY && x.date<=lim && !x.done).forEach(x=>[...x.menu.midi,...x.menu.gouter].forEach(it=>need[it.id]=(need[it.id]||0)+1));
+  const ids=Object.keys(need).sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+  $('prep').innerHTML = ids.length ? ids.map(id=>{
+    const have=S.stock[id]||0, miss=Math.max(0,need[id]-have);
+    return `<li><i class="dot ${dotOf(id)}"></i><span>${esc(F[id].n)}</span><span class="n${miss?' need':''}">${miss?`${miss} à cuisiner`:'couvert'} · ${need[id]} portion${need[id]>1?'s':''}</span></li>`;
+  }).join('') : '<li class="muted">Rien de prévu sur les 7 prochains jours.</li>';
+}
+
+function setTab(t,persist=true){
+  TAB=t;
+  $('tab-cal').setAttribute('aria-selected',t==='cal');
+  $('tab-list').setAttribute('aria-selected',t==='list');
+  $('weeks').hidden=t!=='cal';
+  $('checklist').hidden=t!=='list';
+  if(persist) try{localStorage.setItem(LS+'-tab',t)}catch(e){}
+}
+
+// ---------- Actions ----------
+$('addFood').innerHTML=foodOptions();
+$('tab-cal').addEventListener('click',()=>setTab('cal'));
+$('tab-list').addEventListener('click',()=>setTab('list'));
+$('addForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const id=$('addFood').value, q=Math.max(1,Math.min(99,parseInt($('addQty').value,10)||1));
+  S.stock[id]=(S.stock[id]||0)+q; save(); render();
+});
+$('stockList').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-q]'); if(!b) return;
+  const id=b.dataset.q; S.stock[id]=Math.max(0,(S.stock[id]||0)+Number(b.dataset.d));
+  if(!S.stock[id]) delete S.stock[id];
+  save(); render();
+});
+$('weeks').addEventListener('click',e=>{
+  const ed=e.target.closest('button[data-edit]'), cl=e.target.closest('button[data-close]'), rs=e.target.closest('button[data-reset]');
+  if(ed){ EDIT=ed.dataset.edit; render(); const s=document.querySelector(`select[data-ov="${EDIT}"]`); if(s) s.focus(); }
+  if(cl){ const d=EDIT; EDIT=null; render(); const b=document.querySelector(`button[data-edit="${d}"]`); if(b) b.focus(); }
+  if(rs){ delete S.over[rs.dataset.reset]; save(); render(); }
+});
+$('weeks').addEventListener('change',e=>{
+  const o=e.target.closest('select[data-ov]');
+  if(o){
+    const date=o.dataset.ov, k=o.dataset.slot;
+    (S.over[date]=S.over[date]||{})[k]=o.value;
+    save(); render();
+    const s=document.getElementById(`ov-${date}-${k}`); if(s) s.focus();
+    return;
+  }
+  const c=e.target.closest('input[data-serve]'); if(!c) return;
+  const date=c.dataset.serve;
+  if(c.checked){
+    const di=DAYS.find(x=>x.date===date); if(!di) return;
+    const menu=JSON.parse(JSON.stringify(di.menu));
+    const used=[...menu.midi,...menu.gouter].filter(it=>it.stock).map(it=>it.id);
+    used.forEach(id=>{ if(S.stock[id]>0){S.stock[id]--; if(!S.stock[id]) delete S.stock[id];} });
+    S.done[date]={menu,used};
+  }else{
+    const prev=S.done[date];
+    if(prev) (prev.used||[]).forEach(id=>S.stock[id]=(S.stock[id]||0)+1);
+    delete S.done[date];
+  }
+  save(); render();
+});
+$('checklist').addEventListener('change',e=>{
+  const c=e.target.closest('input[data-taste]'); if(!c) return;
+  const id=c.dataset.taste, P=planInfo();
+  if(c.checked){
+    S.tasted[id]=true;
+    const i=S.plan.indexOf(id);
+    if(i>=P.introduced) S.plan.splice(i,1);
+  }else delete S.tasted[id];
+  save(); render();
+});
+$('checklist').addEventListener('click',e=>{
+  const add=e.target.closest('button[data-plan]'), rm=e.target.closest('button[data-unplan]');
+  if(add){ if(!S.plan.includes(add.dataset.plan)) S.plan.push(add.dataset.plan); save(); render(); }
+  if(rm){ const i=S.plan.indexOf(rm.dataset.unplan), P=planInfo(); if(i>=P.introduced){ S.plan.splice(i,1); save(); render(); } }
+});
+$('start').addEventListener('change',e=>{ if(e.target.value){S.start=e.target.value; save(); render();} });
+$('rhythm').addEventListener('change',e=>{ S.rhythm=+e.target.value; save(); render(); });
+
+// ---------- Sauvegarde ----------
+function setStatus(t){ $('status').textContent=t; }
+function save(){
+  try{ localStorage.setItem(LS,JSON.stringify(S)); setStatus('Enregistré sur ce téléphone.'); }
+  catch(e){ setStatus('Enregistrement impossible : le navigateur bloque le stockage (navigation privée ?).'); }
+}
+// Demande au navigateur de ne pas effacer les données de l'app
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+
+// ---------- Sauvegarde fichier ----------
+$('exportBtn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify({app:'carnet-diversification',version:1,date:TODAY,data:S},null,1)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=`carnet-diversification-${TODAY}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  $('backupStatus').textContent='Fichier exporté.';
+});
+$('importFile').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  try{
+    const json=JSON.parse(await file.text());
+    const d=json && json.data ? json.data : json;
+    if(!d || typeof d!=='object' || !(d.plan||d.tasted||d.stock)) throw new Error('format');
+    S=normalize(d); save(); render();
+    $('backupStatus').textContent='Données importées.';
+  }catch(err){ $('backupStatus').textContent='Ce fichier n’est pas une sauvegarde du carnet. Choisissez un fichier exporté depuis l’app.'; }
+  e.target.value='';
+});
+
+render();
+save();
+setTimeout(()=>{const c=$('current'); if(c && TAB==='cal') c.scrollIntoView({block:'start'});},50);
+
+// ---------- Hors ligne ----------
+if('serviceWorker' in navigator && location.protocol!=='file:'){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+// Un nouveau jour commence alors que l'app est restée ouverte : on recharge pour mettre « aujourd'hui » à jour
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden && iso(new Date())!==TODAY) location.reload(); });
+</script>
+</body>
+</html>
