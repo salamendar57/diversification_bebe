@@ -52,7 +52,8 @@ button,input,select{font:inherit;color:inherit}
 
 /* En-tête */
 .top{display:grid;grid-template-columns:1fr auto;gap:16px 24px;align-items:end;margin-bottom:18px}
-.settings{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.settings{display:flex;flex-wrap:wrap;gap:12px;align-items:end;grid-column:2;grid-row:1/3}
+.top>.sub{grid-column:1;margin:0}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
 input[type=date],input[type=number],select{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:38px}
@@ -126,8 +127,8 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
 .note{font-size:.78rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:6px 8px}
 .day.is-done .note{background:var(--bg)}
 .note.allergen{color:var(--warn)}
-.day.is-editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
-.edit-btn{align-self:flex-start;padding-left:0}
+.day-foot{margin-top:auto;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 8px}
+.edit-btn{padding-left:0}
 .edited{font-style:normal;color:var(--accent);font-weight:600}
 .edit-row{display:flex;flex-direction:column;gap:2px;min-width:0}
 .edit-row label{display:flex;align-items:center;gap:6px;font-size:.74rem;color:var(--muted)}
@@ -173,18 +174,112 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
 .status{font-size:.78rem;color:var(--muted);margin-top:10px}
 .tips{font-size:.85rem;color:var(--muted);margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 
+/* Bouton de progression (mobile) et barre de navigation du bas : masqués sur ordinateur */
+.prog-btn,.bnav{display:none}
+
+/* Recherche et filtres de la liste goûtée */
+.cl-tools{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cl-tools input[type=search]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 14px;min-height:36px;cursor:pointer;font-weight:600;font-size:.85rem;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.cl-empty{color:var(--muted);text-align:center;padding:24px 0}
+
+/* Écran « Aujourd'hui » (mobile) */
+.today-view{display:flex;flex-direction:column;gap:14px}
+.t-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.t-card.is-done{background:var(--surface-2)}
+.t-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.t-head h2{font-size:1.45rem}
+.t-head span{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.t-new{background:var(--accent-soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.t-new b{font-family:var(--font-display);font-size:1.15rem;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.t-new p{margin:0;font-size:.9rem;color:var(--muted)}
+.t-new.allergen p{color:var(--warn)}
+.t-card .meal{gap:8px}
+.t-card .item{font-size:1.05rem;gap:10px;min-height:28px}
+.t-card .dot{width:10px;height:10px}
+.t-actions{display:flex;gap:10px}
+.t-actions .btn{flex:1;min-height:48px;font-size:1rem}
+.btn.serve-btn.on{background:var(--ok);color:var(--accent-ink)}
+.t-next{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 16px}
+.t-next h3{font-size:1rem;padding:10px 0 4px}
+.t-row{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:12px 0;min-height:56px;cursor:pointer}
+.t-row:first-of-type{border-top:0}
+.t-row b{font-size:.9rem}
+.t-row span{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.t-row span strong{color:var(--ink)}
+.t-msg{color:var(--muted);margin:0}
+
+/* Feuille de modification d'un repas */
+.sheet-bg{position:fixed;inset:0;z-index:50;background:rgb(0 0 0 / .45);display:flex;align-items:center;justify-content:center;padding:16px}
+.sheet{background:var(--surface);color:var(--ink);border-radius:16px;width:min(440px,100%);max-height:calc(100vh - 32px);overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:18px}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sheet-h h2{font-size:1.25rem}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:0;background:var(--surface-2);cursor:pointer;font-size:1.3rem;line-height:1;flex:none}
+.sheet .meal{gap:10px}
+.sheet .edit-row label{font-size:.82rem}
+.sheet .edit-row select{min-height:46px;font-size:16px;padding:8px 10px}
+.sheet-f{display:flex;flex-direction:column;gap:8px}
+.sheet-f .btn{min-height:48px;font-size:1rem}
+
 @media (max-width:1100px){.al-list{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}}
 @media (max-width:900px){
+  .wrap{padding-block:12px calc(88px + env(safe-area-inset-bottom,0px))}
   .main{grid-template-columns:1fr}
-  .side{position:static;order:-1;max-height:none;overflow:visible}
+  .side{position:static;max-height:none;overflow:visible}
   .pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tabs{display:none}
+
+  /* En-tête compact : la progression se déplie à la demande */
+  .top{grid-template-columns:1fr auto;align-items:center;gap:12px;margin-bottom:14px}
+  h1{font-size:1.2rem}
+  .prog-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 14px;min-height:44px;font-weight:700;cursor:pointer;font-variant-numeric:tabular-nums}
+  .prog-btn::after{content:"▾";color:var(--muted);transition:transform .15s}
+  .top.open .prog-btn::after{transform:rotate(180deg)}
+  .top>.sub,.top>.settings,.top>.progress,.top>.legend{display:none}
+  .top.open>.settings,.top.open>.progress,.top.open>.legend{display:flex}
+  .top.open>.settings{grid-column:1/-1;grid-row:auto}
+
+  /* Barre de navigation du bas */
+  .bnav{display:grid;grid-template-columns:repeat(4,1fr);position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+  .bnav button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:60px;border:0;background:none;cursor:pointer;color:var(--muted);font-size:.72rem;font-weight:600}
+  .bnav svg{width:24px;height:24px}
+  .bnav button[aria-current="page"]{color:var(--accent)}
+  .bnav .badge{position:absolute;top:6px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:99px;background:var(--warn);color:var(--accent-ink);font-size:.68rem;line-height:18px;text-align:center}
+
+  /* Semaine : un jour par ligne, repas sur une ligne qui passe à la ligne */
+  .days{grid-template-columns:1fr}
+  .day{padding:12px 14px}
+  .day .meal{flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 12px}
+  .day .meal-l{width:100%}
+  .day .item{font-size:.95rem}
+  .day-foot{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  details.week>summary{min-height:44px;align-items:center;flex-wrap:wrap;row-gap:0}
+  details.week>summary small{flex-basis:100%;padding-left:20px}
+
+  /* Zones tactiles et champs (16 px évite le zoom automatique d'iOS) */
+  input,select{font-size:16px!important}
+  input[type=date],input[type=number],select{min-height:44px}
+  .btn{min-height:44px}
+  .link{min-height:44px;padding:10px 8px;font-size:.85rem}
+  .edit-btn{padding-left:0}
+  .serve{min-height:44px;font-size:.9rem}
+  .serve input{width:22px;height:22px}
+  .qty button{width:44px;height:44px;font-size:1.1rem}
+  .stock-list li{padding:6px 0}
+  .cl-grid{grid-template-columns:1fr}
+  .cl-item{min-height:50px}
+  .cl-item input{width:22px;height:22px}
+  .cl-item .nm{font-size:1rem}
+  .cl-tools{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;margin-top:-8px}
+
+  /* La feuille monte du bas de l'écran */
+  .sheet-bg{align-items:flex-end;padding:0}
+  .sheet{width:100%;max-height:88vh;border-radius:18px 18px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 }
-@media (max-width:560px){
-  h1{font-size:1.6rem}
-  .top{grid-template-columns:1fr}
-  .days{grid-template-columns:1fr 1fr}
-}
-@media (max-width:380px){.days{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .backup{display:flex;flex-wrap:wrap;gap:8px}
 .btn.ghost{background:var(--surface-2);color:var(--ink)}
@@ -195,11 +290,12 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
 <body>
 
 <div class="wrap">
-  <header class="top">
+  <header class="top" id="top">
     <div>
       <h1>Carnet de diversification</h1>
-      <p class="sub">Un nouvel aliment à la fois, présenté plusieurs jours de suite. Le midi : légume, protéine, féculent. Au goûter : un fruit. Liste de référence : la fiche « a déjà goûté » de Cuisinez pour Bébé.</p>
     </div>
+    <button type="button" class="prog-btn" id="progBtn" aria-expanded="false" aria-controls="progress">Progression</button>
+    <p class="sub">Un nouvel aliment à la fois, présenté plusieurs jours de suite. Le midi : légume, protéine, féculent. Au goûter : un fruit. Liste de référence : la fiche « a déjà goûté » de Cuisinez pour Bébé.</p>
     <div class="settings">
       <div class="field"><label for="start">Début du plan</label><input type="date" id="start"></div>
       <div class="field"><label for="rhythm">Nouvel aliment tous les</label>
@@ -217,13 +313,25 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
     <section>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" id="tab-cal" aria-controls="weeks" aria-selected="true">Calendrier</button>
-        <button class="tab" role="tab" id="tab-list" aria-controls="checklist" aria-selected="false">Aliments goûtés</button>
+        <button class="tab" role="tab" id="tab-list" aria-controls="tasted" aria-selected="false">Aliments goûtés</button>
       </div>
+      <div class="today-view" id="todayView" hidden></div>
       <div class="weeks" id="weeks" role="tabpanel" aria-labelledby="tab-cal"></div>
-      <div class="checklist" id="checklist" role="tabpanel" aria-labelledby="tab-list" hidden></div>
+      <div id="tasted" role="tabpanel" aria-labelledby="tab-list" hidden>
+        <div class="cl-tools">
+          <input type="search" id="clSearch" placeholder="Rechercher un aliment" aria-label="Rechercher un aliment" autocomplete="off">
+          <div class="chips" role="group" aria-label="Filtrer">
+            <button type="button" class="chip" data-filter="all" aria-pressed="true">Tous</button>
+            <button type="button" class="chip" data-filter="todo" aria-pressed="false">À goûter</button>
+            <button type="button" class="chip" data-filter="ok" aria-pressed="false">Goûtés</button>
+            <button type="button" class="chip" data-filter="plan" aria-pressed="false">Au plan</button>
+          </div>
+        </div>
+        <div class="checklist" id="checklist"></div>
+      </div>
     </section>
 
-    <aside class="side">
+    <aside class="side" id="side">
       <div class="panel">
         <h2>À préparer cette semaine</h2>
         <p class="hint">Portions nécessaires sur les 7 prochains jours, comparées au stock.</p>
@@ -261,6 +369,24 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
         </ul>
       </details>
     </aside>
+  </div>
+</div>
+
+<nav class="bnav" id="bnav" aria-label="Navigation">
+  <button type="button" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M8 20h8"/><path d="M12 11c0-3 1.5-5 4.5-6M11 11C10.5 9 9 7.5 6.5 7"/></svg>Aujourd'hui</button>
+  <button type="button" data-view="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Semaine</button>
+  <button type="button" data-view="stock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M4 6l16 12M20 6 4 18"/></svg>Stock<span class="badge" id="stockBadge" hidden></span></button>
+  <button type="button" data-view="tasted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 2 2 4-4M8 16h8"/></svg>Goûtés</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-h"><h2 id="sheetTitle">Modifier le menu</h2><button type="button" class="icon-btn" id="sheetClose" aria-label="Fermer">×</button></div>
+    <div id="sheetBody"></div>
+    <div class="sheet-f">
+      <button type="button" class="btn" id="sheetDone">Terminé</button>
+      <button type="button" class="btn ghost" id="sheetReset" hidden>Revenir au menu proposé</button>
+    </div>
   </div>
 </div>
 
@@ -498,13 +624,100 @@ function render(){
   $('start').value=S.start; $('rhythm').value=String(S.rhythm);
   const P=planInfo();
   DAYS=simulate(P);
+  $('progBtn').textContent=`${P.introduced}/${P.N} nouveaux`;
   renderProgress(P);
+  renderToday(P);
   renderWeeks(P);
   renderChecklist(P);
   renderStock();
   renderPrep();
-  setTab(TAB,false);
+  renderSheet();
+  applyLayout();
 }
+
+// ---------- Écran « Aujourd'hui » ----------
+function mealsHTML(di){
+  return `<div class="meal"><span class="meal-l">Midi</span>${di.menu.midi.map(itemHTML).join('')||'<span class="muted">Rien de prévu</span>'}</div>
+    <div class="meal"><span class="meal-l">Goûter</span>${di.menu.gouter.map(itemHTML).join('')||'<span class="muted">Rien de prévu</span>'}</div>`;
+}
+function renderToday(P){
+  if(!DAYS.length){ $('todayView').innerHTML='<div class="t-card"><p class="t-msg">Le plan est vide. Ajoutez des aliments depuis l’onglet « Goûtés ».</p></div>'; return; }
+  let di=DAYS.find(x=>x.date===TODAY), msg='';
+  if(!di && TODAY<DAYS[0].date){ di=DAYS[0]; msg=`<p class="t-msg">Le plan commence le ${nice(parse(di.date))}. Voici le premier jour.</p>`; }
+  if(!di){ $('todayView').innerHTML='<div class="t-card"><p class="t-msg">Le plan est terminé. Ajoutez des aliments au plan depuis l’onglet « Goûtés », ou changez la date de début.</p></div>'; return; }
+  const dt=parse(di.date);
+  const note = di.intro && NOTES[di.intro.id];
+  const newBlock = di.intro && !di.done && [...di.menu.midi,...di.menu.gouter].some(it=>it.intro)
+    ? `<div class="t-new${di.intro.al?' allergen':''}"><b>${esc(di.intro.n)} ${repLabel(di.rep)}</b>${note?`<p>${esc(note)}</p>`:''}</div>` : '';
+  const canServe = di.date<=TODAY;
+  const card=`<article class="t-card${di.done?' is-done':''}">
+    <div class="t-head"><h2>${di.date===TODAY?'Aujourd’hui':DOW[dt.getDay()]+' '+nice(dt)}</h2><span>${di.date===TODAY?DOW[dt.getDay()]+' '+nice(dt)+' · ':''}J${di.d+1}${di.edited?' · modifié':''}</span></div>
+    ${msg}${newBlock}${mealsHTML(di)}
+    <div class="t-actions">
+      ${di.done?'':`<button type="button" class="btn ghost" data-edit="${di.date}">Modifier</button>`}
+      ${canServe?`<button type="button" class="btn serve-btn${di.done?' on':''}" data-serve-btn="${di.date}" aria-pressed="${di.done}">${di.done?'✓ Servi':'Marquer servi'}</button>`:''}
+    </div></article>`;
+  const i=DAYS.indexOf(di);
+  const next=DAYS.slice(i+1,i+4).map(x=>{
+    const d=parse(x.date), all=[...x.menu.midi,...x.menu.gouter];
+    const names=all.map(it=>it.intro&&it.rep===0?`<strong>${esc(F[it.id].n)} (nouveau)</strong>`:esc(F[it.id].n)).join(', ');
+    return `<button type="button" class="t-row" data-edit="${x.date}" aria-label="Modifier le menu du ${nice(d)}"><b>${DOW[d.getDay()]} ${d.getDate()}</b><span>${names}</span></button>`;
+  }).join('');
+  $('todayView').innerHTML = card + (next?`<div class="t-next"><h3>Prochains jours</h3>${next}<button type="button" class="t-row" data-goto="week"><b>Semaine</b><span>Voir tout le calendrier ›</span></button></div>`:'');
+}
+
+// ---------- Feuille de modification ----------
+let lastFocus=null;
+function openSheet(date){
+  const di=DAYS.find(x=>x.date===date);
+  if(!di || di.done) return;
+  lastFocus=document.activeElement;
+  EDIT=date; renderSheet();
+  $('sheetBg').hidden=false;
+  document.body.style.overflow='hidden';
+  const s=$('sheetBody').querySelector('select'); if(s) s.focus();
+}
+function closeSheet(){
+  EDIT=null; $('sheetBg').hidden=true; document.body.style.overflow='';
+  if(lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
+}
+function renderSheet(){
+  if(!EDIT) return;
+  const di=DAYS.find(x=>x.date===EDIT);
+  if(!di || di.done){ closeSheet(); return; }
+  const dt=parse(di.date);
+  $('sheetTitle').textContent=`Menu du ${DOW[dt.getDay()]} ${nice(dt)}`;
+  $('sheetBody').innerHTML=`<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
+    <div class="meal" style="margin-top:14px"><span class="meal-l">Goûter</span>${['fruit','lait','xg'].map(k=>editRow(di,k)).join('')}</div>`;
+  $('sheetReset').hidden=!di.edited;
+}
+
+// ---------- Mise en page : onglets sur ordinateur, écrans sur téléphone ----------
+const MQ=window.matchMedia('(max-width:900px)');
+let VIEW='today';
+function applyLayout(){
+  const mobile=MQ.matches;
+  if(mobile){
+    $('todayView').hidden=VIEW!=='today';
+    $('weeks').hidden=VIEW!=='week';
+    $('tasted').hidden=VIEW!=='tasted';
+    $('side').hidden=VIEW!=='stock';
+  }else{
+    $('todayView').hidden=true;
+    $('side').hidden=false;
+    $('weeks').hidden=TAB!=='cal';
+    $('tasted').hidden=TAB!=='list';
+  }
+  $('tab-cal').setAttribute('aria-selected',TAB==='cal');
+  $('tab-list').setAttribute('aria-selected',TAB==='list');
+  document.querySelectorAll('#bnav button').forEach(b=>{ if(b.dataset.view===VIEW) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+}
+function setView(v){
+  VIEW=v; applyLayout();
+  window.scrollTo(0,0);
+  if(v==='week'){ const t=document.querySelector('.day.is-today')||$('current'); if(t) t.scrollIntoView({block:'center'}); }
+}
+MQ.addEventListener ? MQ.addEventListener('change',applyLayout) : MQ.addListener(applyLayout);
 
 function renderProgress(P){
   const end=addDays(P.start,P.N*P.R-1);
@@ -558,21 +771,13 @@ function renderWeeks(P){
       const note = di.intro && di.rep===0 && !di.done && NOTES[di.intro.id];
       const introNote = note ? `<div class="note${di.intro.al?' allergen':''}">${esc(note)}</div>` : '';
       const state=[di.date===TODAY?'is-today':'', di.done?'is-done':'', di.date<TODAY?'is-past':''].join(' ');
-      const editing = EDIT===di.date && !di.done;
-      const tools = di.done ? '' : editing
-        ? `<div class="edit-actions"><button type="button" class="btn sm" data-close="1">Terminé</button>${di.edited?`<button type="button" class="link" data-reset="${di.date}">Revenir au menu proposé</button>`:''}</div>`
-        : `<button type="button" class="link edit-btn" data-edit="${di.date}" aria-label="Modifier le menu du ${nice(dt)}">Modifier</button>`;
-      const meals = editing
-        ? `<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
-           <div class="meal"><span class="meal-l">Goûter</span>${['fruit','lait','xg'].map(k=>editRow(di,k)).join('')}</div>`
-        : `<div class="meal"><span class="meal-l">Midi</span>${di.menu.midi.map(itemHTML).join('')}</div>
-           <div class="meal"><span class="meal-l">Goûter</span>${di.menu.gouter.map(itemHTML).join('')}</div>`;
-      cards+=`<article class="day ${state}${editing?' is-editing':''}">
+      const edit = di.done ? '' : `<button type="button" class="link edit-btn" data-edit="${di.date}" aria-label="Modifier le menu du ${nice(dt)}">Modifier</button>`;
+      const serve = di.date<=TODAY ? `<label class="serve"><input type="checkbox" data-serve="${di.date}" ${di.done?'checked':''}> ${di.done?'Servi':'Marquer servi'}</label>` : '';
+      cards+=`<article class="day ${state}">
         <div class="day-h"><b>${DOW[dt.getDay()]} ${nice(dt)}</b><span>${di.edited?'<em class="edited">modifié</em> · ':''}J${di.d+1}</span></div>
-        ${meals}
-        ${editing?'':introNote}
-        ${tools}
-        ${di.date<=TODAY?`<label class="serve"><input type="checkbox" data-serve="${di.date}" ${di.done?'checked':''}> ${di.done?'Servi':'Marquer servi'}</label>`:''}
+        ${mealsHTML(di)}
+        ${introNote}
+        <div class="day-foot">${edit}${serve}</div>
       </article>`;
     }
     const label = mIso===todayMonday ? 'Cette semaine' : `Semaine ${w+1}`;
@@ -583,10 +788,26 @@ function renderWeeks(P){
   $('weeks').innerHTML=html;
 }
 
+let CL_Q='', CL_F='all';
+const fold=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function renderChecklist(P){
+  P=P||planInfo();
+  const q=fold(CL_Q.trim());
+  const keep=id=>{
+    const st=status(id,P);
+    if(q && !fold(F[id].n).includes(q)) return false;
+    if(CL_F==='ok') return st==='ok'||st==='cur';
+    if(CL_F==='todo') return st==='todo'||st==='plan';
+    if(CL_F==='plan') return st==='plan'||st==='cur';
+    return true;
+  };
+  let shown=0;
   const html=CATS.map(([c,label,items])=>{
     const ok=items.filter(([id])=>status(id,P)==='ok').length;
-    const rows=items.map(([id])=>{
+    const vis=items.filter(([id])=>keep(id));
+    if(!vis.length) return '';
+    shown+=vis.length;
+    const rows=vis.map(([id])=>{
       const f=F[id], st=status(id,P), i=S.plan.indexOf(id);
       const auto = (st==='ok'||st==='cur') && !S.tasted[id];
       let right='';
@@ -599,7 +820,8 @@ function renderChecklist(P){
     }).join('');
     return `<section class="cl-sec"><h2><i class="dot ${cls(c)}"></i>${label}<small>${ok}/${items.length} goûtés</small></h2><ul class="cl-grid">${rows}</ul></section>`;
   }).join('');
-  $('checklist').innerHTML=`<p class="cl-note">Cochez ce que bébé a déjà goûté. Les aliments cochés sortent du plan. « + au plan » ajoute un aliment à la fin du calendrier. * = allergène majeur.</p>`+html;
+  $('checklist').innerHTML=`<p class="cl-note">Cochez ce que bébé a déjà goûté. Les aliments cochés sortent du plan. « + au plan » ajoute un aliment à la fin du calendrier. * = allergène majeur.</p>`
+    +(shown?html:`<p class="cl-empty">Aucun aliment ne correspond${q?` à « ${esc(CL_Q.trim())} »`:''}.</p>`);
 }
 
 function stockFoods(){ return ORDER.filter(id=>F[id].c!=='herb' && !F[id].np); }
@@ -616,19 +838,18 @@ function renderPrep(){
   const lim=iso(addDays(parse(TODAY),6)), need={};
   DAYS.filter(x=>x.date>=TODAY && x.date<=lim && !x.done).forEach(x=>[...x.menu.midi,...x.menu.gouter].forEach(it=>need[it.id]=(need[it.id]||0)+1));
   const ids=Object.keys(need).sort((a,b)=>ORDER.indexOf(a)-ORDER.indexOf(b));
+  const missing=ids.filter(id=>need[id]>(S.stock[id]||0)).length;
+  $('stockBadge').textContent=missing; $('stockBadge').hidden=!missing;
+  $('stockBadge').setAttribute('aria-label',`${missing} aliment${missing>1?'s':''} à cuisiner`);
   $('prep').innerHTML = ids.length ? ids.map(id=>{
     const have=S.stock[id]||0, miss=Math.max(0,need[id]-have);
     return `<li><i class="dot ${dotOf(id)}"></i><span>${esc(F[id].n)}</span><span class="n${miss?' need':''}">${miss?`${miss} à cuisiner`:'couvert'} · ${need[id]} portion${need[id]>1?'s':''}</span></li>`;
   }).join('') : '<li class="muted">Rien de prévu sur les 7 prochains jours.</li>';
 }
 
-function setTab(t,persist=true){
-  TAB=t;
-  $('tab-cal').setAttribute('aria-selected',t==='cal');
-  $('tab-list').setAttribute('aria-selected',t==='list');
-  $('weeks').hidden=t!=='cal';
-  $('checklist').hidden=t!=='list';
-  if(persist) try{localStorage.setItem(LS+'-tab',t)}catch(e){}
+function setTab(t){
+  TAB=t; applyLayout();
+  try{localStorage.setItem(LS+'-tab',t)}catch(e){}
 }
 
 // ---------- Actions ----------
@@ -646,25 +867,10 @@ $('stockList').addEventListener('click',e=>{
   if(!S.stock[id]) delete S.stock[id];
   save(); render();
 });
-$('weeks').addEventListener('click',e=>{
-  const ed=e.target.closest('button[data-edit]'), cl=e.target.closest('button[data-close]'), rs=e.target.closest('button[data-reset]');
-  if(ed){ EDIT=ed.dataset.edit; render(); const s=document.querySelector(`select[data-ov="${EDIT}"]`); if(s) s.focus(); }
-  if(cl){ const d=EDIT; EDIT=null; render(); const b=document.querySelector(`button[data-edit="${d}"]`); if(b) b.focus(); }
-  if(rs){ delete S.over[rs.dataset.reset]; save(); render(); }
-});
-$('weeks').addEventListener('change',e=>{
-  const o=e.target.closest('select[data-ov]');
-  if(o){
-    const date=o.dataset.ov, k=o.dataset.slot;
-    (S.over[date]=S.over[date]||{})[k]=o.value;
-    save(); render();
-    const s=document.getElementById(`ov-${date}-${k}`); if(s) s.focus();
-    return;
-  }
-  const c=e.target.closest('input[data-serve]'); if(!c) return;
-  const date=c.dataset.serve;
-  if(c.checked){
-    const di=DAYS.find(x=>x.date===date); if(!di) return;
+// Servir un repas : retire du stock les portions utilisées (et les rend si on annule)
+function toggleServe(date,on){
+  if(on){
+    const di=DAYS.find(x=>x.date===date); if(!di || S.done[date]) return;
     const menu=JSON.parse(JSON.stringify(di.menu));
     const used=[...menu.midi,...menu.gouter].filter(it=>it.stock).map(it=>it.id);
     used.forEach(id=>{ if(S.stock[id]>0){S.stock[id]--; if(!S.stock[id]) delete S.stock[id];} });
@@ -675,6 +881,44 @@ $('weeks').addEventListener('change',e=>{
     delete S.done[date];
   }
   save(); render();
+}
+$('weeks').addEventListener('click',e=>{
+  const ed=e.target.closest('button[data-edit]');
+  if(ed) openSheet(ed.dataset.edit);
+});
+$('weeks').addEventListener('change',e=>{
+  const c=e.target.closest('input[data-serve]');
+  if(c) toggleServe(c.dataset.serve,c.checked);
+});
+$('todayView').addEventListener('click',e=>{
+  const ed=e.target.closest('[data-edit]'), sv=e.target.closest('button[data-serve-btn]'), go=e.target.closest('[data-goto]');
+  if(ed) openSheet(ed.dataset.edit);
+  if(sv){ const d=sv.dataset.serveBtn; toggleServe(d,!S.done[d]); const b=document.querySelector(`button[data-serve-btn="${d}"]`); if(b) b.focus(); }
+  if(go) setView(go.dataset.goto);
+});
+$('sheetBody').addEventListener('change',e=>{
+  const o=e.target.closest('select[data-ov]'); if(!o) return;
+  const date=o.dataset.ov, k=o.dataset.slot;
+  (S.over[date]=S.over[date]||{})[k]=o.value;
+  save(); render();
+  const s=document.getElementById(`ov-${date}-${k}`); if(s) s.focus();
+});
+$('sheetDone').addEventListener('click',closeSheet);
+$('sheetClose').addEventListener('click',closeSheet);
+$('sheetReset').addEventListener('click',()=>{ if(EDIT){ delete S.over[EDIT]; save(); render(); $('sheetDone').focus(); } });
+$('sheetBg').addEventListener('click',e=>{ if(e.target===$('sheetBg')) closeSheet(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && EDIT) closeSheet(); });
+$('bnav').addEventListener('click',e=>{ const b=e.target.closest('button[data-view]'); if(b) setView(b.dataset.view); });
+$('progBtn').addEventListener('click',()=>{
+  const open=$('top').classList.toggle('open');
+  $('progBtn').setAttribute('aria-expanded',open);
+});
+$('clSearch').addEventListener('input',e=>{ CL_Q=e.target.value; renderChecklist(); });
+document.querySelector('.chips').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-filter]'); if(!b) return;
+  CL_F=b.dataset.filter;
+  document.querySelectorAll('.chips .chip').forEach(c=>c.setAttribute('aria-pressed',c===b));
+  renderChecklist();
 });
 $('checklist').addEventListener('change',e=>{
   const c=e.target.closest('input[data-taste]'); if(!c) return;
@@ -726,7 +970,7 @@ $('importFile').addEventListener('change',async e=>{
 
 render();
 save();
-setTimeout(()=>{const c=$('current'); if(c && TAB==='cal') c.scrollIntoView({block:'start'});},50);
+setTimeout(()=>{const c=$('current'); if(c && TAB==='cal' && !MQ.matches) c.scrollIntoView({block:'start'});},50);
 
 // ---------- Hors ligne ----------
 if('serviceWorker' in navigator && location.protocol!=='file:'){
