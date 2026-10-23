@@ -292,6 +292,30 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
 .btn.ghost{background:var(--surface-2);color:var(--ink)}
 .file-btn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
 .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* Bouton « Actualiser le menu » en haut de la semaine */
+.wk-tools{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.wk-tools .hint{color:var(--muted);font-size:.82rem;margin:0;flex:1 1 200px}
+.day.is-changed{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+
+/* Nouvel aliment dans la feuille de modification */
+.intro-box{background:var(--accent-soft);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.intro-cur{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--font-display);font-size:1.15rem;font-weight:600}
+.intro-box .hint{margin:0;font-size:.85rem;color:var(--muted)}
+.intro-box .btn{min-height:46px}
+.t-new .link{align-self:flex-start;padding-left:0}
+
+/* Message en bas d'écran, avec « Annuler » */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:60;width:min(460px,calc(100% - 32px));background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;box-shadow:0 6px 24px rgb(0 0 0 / .25)}
+.toast p{margin:0;flex:1 1 200px;font-size:.92rem}
+.toast-a{display:flex;gap:8px;margin-left:auto}
+body.modal .toast{bottom:auto;top:calc(12px + env(safe-area-inset-top,0px))}
+.toast .btn{min-height:44px}
+.toast .btn.ghost{background:transparent;color:var(--bg);border:1px solid currentColor}
+@media (max-width:900px){
+  .toast{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
+  .wk-tools .btn{flex:1 1 100%;min-height:48px;font-size:1rem}
+}
 </style>
 </head>
 <body>
@@ -396,6 +420,8 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
           <li>Allergènes : un seul nouveau à la fois, en petite quantité, en journée et à la maison. Ensuite, en reproposer environ 1 fois par semaine.</li>
           <li>Une réaction peut apparaître de quelques minutes à 72 h après. En cas de réaction sévère, appelez le 15.</li>
           <li>Lait : déjà présent si bébé boit du lait infantile. Soja : déconseillé avant 3 ans (ANSES). Moutarde et lupin : seulement s'ils font partie de vos habitudes. Sulfites : additif, peu d'intérêt.</li>
+          <li>Un nouvel aliment introuvable chez le primeur ? Touchez « Modifier » sur le jour : vous pouvez le remplacer par un autre ou le reporter, les menus se recalculent.</li>
+          <li>« Actualiser le menu » (page Semaine) recalcule les jours à venir en utilisant d'abord votre stock.</li>
           <li>Viande ou poisson : 10 g par jour (2 c. à café), de préférence le midi. Œuf : 1/4 bien cuit.</li>
           <li>1 c. à café d'huile (colza, noix, olive) dans la purée. Ni sel, ni sucre. Pas de miel avant 1 an.</li>
           <li>Plan indicatif, à adapter avec votre pédiatre.</li>
@@ -411,6 +437,8 @@ details.week>summary small{font-family:var(--font-body);color:var(--muted);font-
   <button type="button" data-view="stock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M4 6l16 12M20 6 4 18"/></svg>Stock<span class="badge" id="stockBadge" hidden></span></button>
   <button type="button" data-view="tasted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 2 2 4-4M8 16h8"/></svg>Goûtés</button>
 </nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden><p id="toastMsg"></p><div class="toast-a" id="toastActions"></div></div>
 
 <div class="sheet-bg" id="sheetBg" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
@@ -539,7 +567,7 @@ const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
 const DOW=['dim.','lun.','mar.','mer.','jeu.','ven.','sam.'];
 const MON=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 const nice=d=>`${d.getDate()} ${MON[d.getMonth()]}`;
-const TODAY=iso(new Date());
+let TODAY=iso(new Date());
 
 // ---------- État ----------
 function normalize(d){
@@ -680,8 +708,9 @@ function renderToday(P){
   if(!di){ $('todayView').innerHTML='<div class="t-card"><p class="t-msg">Le plan est terminé. Ajoutez des aliments au plan depuis l’onglet « Goûtés », ou changez la date de début.</p></div>'; return; }
   const dt=parse(di.date);
   const note = di.intro && NOTES[di.intro.id];
+  const swap = canChangeIntro(di) ? `<button type="button" class="link" data-edit="${di.date}">Pas disponible ? Remplacer ou reporter</button>` : '';
   const newBlock = di.intro && !di.done && [...di.menu.midi,...di.menu.gouter].some(it=>it.intro)
-    ? `<div class="t-new${di.intro.al?' allergen':''}"><b>${esc(di.intro.n)} ${repLabel(di.rep)}</b>${note?`<p>${esc(note)}</p>`:''}</div>` : '';
+    ? `<div class="t-new${di.intro.al?' allergen':''}"><b>${esc(di.intro.n)} ${repLabel(di.rep)}</b>${note?`<p>${esc(note)}</p>`:''}${swap}</div>` : '';
   const canServe = di.date<=TODAY;
   const card=`<article class="t-card${di.done?' is-done':''}">
     <div class="t-head"><h2>${di.date===TODAY?'Aujourd’hui':DOW[dt.getDay()]+' '+nice(dt)}</h2><span>${di.date===TODAY?DOW[dt.getDay()]+' '+nice(dt)+' · ':''}J${di.d+1}${di.edited?' · modifié':''}</span></div>
@@ -696,7 +725,7 @@ function renderToday(P){
     const names=all.map(it=>it.intro&&it.rep===0?`<strong>${esc(F[it.id].n)} (nouveau)</strong>`:esc(F[it.id].n)).join(', ');
     return `<button type="button" class="t-row" data-edit="${x.date}" aria-label="Modifier le menu du ${nice(d)}"><b>${DOW[d.getDay()]} ${d.getDate()}</b><span>${names}</span></button>`;
   }).join('');
-  $('todayView').innerHTML = card + (next?`<div class="t-next"><h3>Prochains jours</h3>${next}<button type="button" class="t-row" data-goto="week"><b>Semaine</b><span>Voir tout le calendrier ›</span></button></div>`:'');
+  $('todayView').innerHTML = card + (next?`<div class="t-next"><h3>Prochains jours</h3>${next}<button type="button" class="t-row" data-goto="week"><b>Semaine</b><span>Voir tout le calendrier ›</span></button><button type="button" class="t-row" data-refresh><b>Actualiser</b><span>Recalculer les menus avec le stock</span></button></div>`:'');
 }
 
 // ---------- Feuille de modification ----------
@@ -707,11 +736,11 @@ function openSheet(date){
   lastFocus=document.activeElement;
   EDIT=date; renderSheet();
   $('sheetBg').hidden=false;
-  document.body.style.overflow='hidden';
+  document.body.style.overflow='hidden'; document.body.classList.add('modal');
   const s=$('sheetBody').querySelector('select'); if(s) s.focus();
 }
 function closeSheet(){
-  EDIT=null; $('sheetBg').hidden=true; document.body.style.overflow='';
+  EDIT=null; $('sheetBg').hidden=true; document.body.style.overflow=''; document.body.classList.remove('modal');
   if(lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
 }
 function renderSheet(){
@@ -720,10 +749,108 @@ function renderSheet(){
   if(!di || di.done){ closeSheet(); return; }
   const dt=parse(di.date);
   $('sheetTitle').textContent=`Menu du ${DOW[dt.getDay()]} ${nice(dt)}`;
-  $('sheetBody').innerHTML=`<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
+  $('sheetBody').innerHTML=introSection(di)+`<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
     <div class="meal" style="margin-top:14px"><span class="meal-l">Goûter</span>${['fruit','lait','xg'].map(k=>editRow(di,k)).join('')}</div>`;
   $('sheetReset').hidden=!di.edited;
 }
+
+// ---------- Nouvel aliment indisponible : le remplacer ou le reporter ----------
+const blockOf=di=>Math.floor(di.d/+S.rhythm);
+// On ne touche ni aux blocs passés ni à un nouvel aliment déjà servi
+function canChangeIntro(di){
+  if(!di || !di.intro || di.done) return false;
+  const P=planInfo(), b=blockOf(di);
+  if(P.elapsed>=0 && b<Math.floor(P.elapsed/P.R)) return false;
+  return !DAYS.some(x=>x.done && blockOf(x)===b && [...x.menu.midi,...x.menu.gouter].some(it=>it.id===di.intro.id));
+}
+function introSection(di){
+  if(!canChangeIntro(di)) return '';
+  const P=planInfo(), b=blockOf(di), cur=di.intro;
+  const byName=(x,y)=>F[x].n.localeCompare(F[y].n,'fr');
+  const free=ORDER.filter(id=>{ const i=S.plan.indexOf(id); return id!==cur.id && !S.tasted[id] && !F[id].np && F[id].c!=='herb' && (i<0 || i>b); });
+  const stock=free.filter(id=>S.stock[id]>0).sort(byName);
+  const next=S.plan.slice(b+1).filter(id=>free.includes(id) && !stock.includes(id)).slice(0,6);
+  const rest=free.filter(id=>!stock.includes(id) && !next.includes(id));
+  const groups=[['En stock',stock],['Prochains au plan',next],...CATS.filter(([c])=>c!=='herb').map(([c,label])=>[label,rest.filter(id=>F[id].c===c).sort(byName)])];
+  const opt=id=>`<option value="${id}">${esc(F[id].n)}${F[id].al?' *':''}${S.stock[id]>0?` (stock : ${S.stock[id]})`:''}</option>`;
+  const opts=groups.filter(([,ids])=>ids.length).map(([l,ids])=>`<optgroup label="${l}">${ids.map(opt).join('')}</optgroup>`).join('');
+  const later=b+1<S.plan.length ? nice(addDays(P.start,(b+1)*P.R)) : '';
+  return `<div class="intro-box">
+    <span class="meal-l">Nouvel aliment</span>
+    <div class="intro-cur"><i class="dot ${dotOf(cur.id)}"></i>${esc(cur.n)} ${repLabel(di.rep)}</div>
+    <p class="hint">Pas disponible ? Choisissez un autre nouvel aliment ou reportez celui-ci : les menus se recalculent. * = allergène majeur.</p>
+    <div class="edit-row"><label for="introSel">Remplacer « ${esc(cur.n)} » par…</label>
+      <select id="introSel" data-intro="${di.date}"><option value="" selected>Choisir un aliment</option>${opts}</select></div>
+    ${later?`<button type="button" class="btn ghost" id="postponeBtn" data-postpone="${di.date}">Reporter « ${esc(cur.n)} » au ${later}</button>`:''}
+  </div>`;
+}
+// id = aliment de remplacement ; sans id, on échange avec le bloc suivant
+function changeIntro(date,id){
+  const di=DAYS.find(x=>x.date===date); if(!canChangeIntro(di)) return;
+  const b=blockOf(di), old=S.plan[b];
+  if(!id && b+1>=S.plan.length) return;
+  const prev={plan:[...S.plan],over:JSON.parse(JSON.stringify(S.over))}, before=menuSig();
+  if(id){
+    const j=S.plan.indexOf(id); if(j>b) S.plan.splice(j,1);
+    S.plan.splice(b,1,id,old);
+  }else [S.plan[b],S.plan[b+1]]=[S.plan[b+1],S.plan[b]];
+  // Les retouches qui servaient l'ancien nouvel aliment avant sa nouvelle date n'ont plus de sens
+  const P=planInfo(), when=addDays(P.start,S.plan.indexOf(old)*P.R), whenIso=iso(when);
+  Object.keys(S.over).forEach(d=>{
+    if(d<TODAY || d>=whenIso || S.done[d]) return;
+    const o=S.over[d]; Object.keys(o).forEach(k=>{ if(o[k]===old) delete o[k]; });
+    if(!Object.keys(o).length) delete S.over[d];
+  });
+  save(); render(); markChanged(before);
+  toast(`Nouvel aliment : ${F[S.plan[b]].n}. ${F[old].n} passe au ${nice(when)}`,
+    [{label:'Annuler',fn:()=>{ const bf=menuSig(); S.plan=prev.plan; S.over=prev.over; save(); render(); markChanged(bf); toast('Modification annulée.'); }}]);
+}
+
+// ---------- « Actualiser le menu » : on efface les retouches à venir pour que le stock passe en priorité ----------
+function refreshMenu(confirmed){
+  TODAY=iso(new Date());
+  const dates=Object.keys(S.over).filter(d=>d>=TODAY && !S.done[d]);
+  if(dates.length && !confirmed){
+    const n=dates.length, s=n>1?'s':'';
+    toast(`${n} jour${s} modifié${s} à la main ser${n>1?'ont':'a'} recalculé${s}.`,[{label:'Recalculer',primary:true,fn:()=>refreshMenu(true)},{label:'Annuler'}],0);
+    $('toastActions').querySelector('button').focus();
+    return;
+  }
+  const prevOver=JSON.parse(JSON.stringify(S.over)), before=menuSig();
+  dates.forEach(d=>delete S.over[d]);
+  save(); render();
+  const changed=markChanged(before);
+  const lim=iso(addDays(parse(TODAY),6));
+  const used=DAYS.filter(x=>x.date>=TODAY && x.date<=lim && !x.done).reduce((n,x)=>n+[...x.menu.midi,...x.menu.gouter].filter(it=>it.stock).length,0);
+  const pl=n=>n>1?'s':'';
+  toast(`Menu recalculé : ${used?`${used} portion${pl(used)} du stock utilisée${pl(used)} sur les 7 prochains jours`:'aucune portion du stock à utiliser cette semaine'}${changed?` · ${changed} jour${pl(changed)} changé${pl(changed)}`:''}.`,
+    dates.length?[{label:'Annuler',fn:()=>{ const bf=menuSig(); S.over=prevOver; save(); render(); markChanged(bf); toast('Retouches restaurées.'); }}]:[]);
+}
+
+// Jours de la semaine à venir dont le menu vient de changer : mis en évidence quelques secondes
+// (au-delà, la rotation décale presque tout, ce serait du bruit)
+let CHANGED=new Set(), changedTimer=null;
+const menuSig=()=>Object.fromEntries(DAYS.filter(x=>!x.done && x.date>=TODAY && x.date<=iso(addDays(parse(TODAY),6))).map(x=>[x.date,[...x.menu.midi,...x.menu.gouter].map(it=>it.id).join()]));
+function markChanged(before){
+  const after=menuSig();
+  CHANGED=new Set(Object.keys(after).filter(d=>d>=TODAY && after[d]!==before[d]));
+  CHANGED.forEach(d=>{ const a=document.querySelector(`.day[data-date="${d}"]`); if(a) a.classList.add('is-changed'); });
+  clearTimeout(changedTimer);
+  changedTimer=setTimeout(()=>{ CHANGED=new Set(); document.querySelectorAll('.day.is-changed').forEach(a=>a.classList.remove('is-changed')); },6000);
+  return CHANGED.size;
+}
+
+// Message en bas d'écran ; ms=0 le laisse affiché jusqu'à un choix
+let toastTimer=null, TOAST_ACTIONS=[];
+function toast(msg,actions=[],ms=6000){
+  clearTimeout(toastTimer);
+  TOAST_ACTIONS=actions;
+  $('toast').hidden=false;
+  $('toastMsg').textContent=msg;
+  $('toastActions').innerHTML=actions.map((a,i)=>`<button type="button" class="btn${a.primary?'':' ghost'}" data-i="${i}">${esc(a.label)}</button>`).join('');
+  if(ms) toastTimer=setTimeout(hideToast,ms);
+}
+function hideToast(){ clearTimeout(toastTimer); $('toast').hidden=true; TOAST_ACTIONS=[]; }
 
 // ---------- Mise en page : onglets sur ordinateur, écrans sur téléphone ----------
 const MQ=window.matchMedia('(max-width:900px)');
@@ -806,7 +933,7 @@ function renderWeeks(P){
       const state=[di.date===TODAY?'is-today':'', di.done?'is-done':'', di.date<TODAY?'is-past':''].join(' ');
       const edit = di.done ? '' : `<button type="button" class="link edit-btn" data-edit="${di.date}" aria-label="Modifier le menu du ${nice(dt)}">Modifier</button>`;
       const serve = di.date<=TODAY ? `<label class="serve"><input type="checkbox" data-serve="${di.date}" ${di.done?'checked':''}> ${di.done?'Servi':'Marquer servi'}</label>` : '';
-      cards+=`<article class="day ${state}">
+      cards+=`<article class="day ${state}${CHANGED.has(di.date)?' is-changed':''}" data-date="${di.date}">
         <div class="day-h"><b>${DOW[dt.getDay()]} ${nice(dt)}</b><span>${di.edited?'<em class="edited">modifié</em> · ':''}J${di.d+1}</span></div>
         ${mealsHTML(di)}
         ${introNote}
@@ -818,7 +945,8 @@ function renderWeeks(P){
       <summary>${label} <small>${nice(m)} – ${nice(sun)}${intros.length?' · nouveau : '+intros.map(esc).join(', '):''}</small></summary>
       <div class="days">${cards}</div></details>`;
   }
-  $('weeks').innerHTML=html;
+  const tools=`<div class="wk-tools"><button type="button" class="btn" data-refresh>Actualiser le menu</button><p class="hint">Recalcule les jours à venir en utilisant d'abord le stock.</p></div>`;
+  $('weeks').innerHTML=tools+html;
 }
 
 let CL_Q='', CL_F='all';
@@ -915,9 +1043,19 @@ function toggleServe(date,on){
   }
   save(); render();
 }
+// Remet le focus sur le bouton « Actualiser » de l'écran visible après le recalcul
+function focusRefresh(){ const r=document.querySelector(MQ.matches&&VIEW==='today'?'#todayView [data-refresh]':'#weeks [data-refresh]'); if(r) r.focus({preventScroll:true}); }
 $('weeks').addEventListener('click',e=>{
   const ed=e.target.closest('button[data-edit]');
   if(ed) openSheet(ed.dataset.edit);
+  if(e.target.closest('button[data-refresh]')){ refreshMenu(); if($('toast').hidden||TOAST_ACTIONS.length<2) focusRefresh(); }
+});
+$('toastActions').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-i]'); if(!b) return;
+  const a=TOAST_ACTIONS[+b.dataset.i];
+  hideToast();
+  if(a && a.fn) a.fn();
+  if(!EDIT) focusRefresh();
 });
 $('weeks').addEventListener('change',e=>{
   const c=e.target.closest('input[data-serve]');
@@ -928,8 +1066,16 @@ $('todayView').addEventListener('click',e=>{
   if(ed) openSheet(ed.dataset.edit);
   if(sv){ const d=sv.dataset.serveBtn; toggleServe(d,!S.done[d]); const b=document.querySelector(`button[data-serve-btn="${d}"]`); if(b) b.focus(); }
   if(go) setView(go.dataset.goto);
+  if(e.target.closest('button[data-refresh]')){ refreshMenu(); if($('toast').hidden||TOAST_ACTIONS.length<2) focusRefresh(); }
+});
+$('sheetBody').addEventListener('click',e=>{
+  const p=e.target.closest('button[data-postpone]'); if(!p) return;
+  changeIntro(p.dataset.postpone);
+  const f=$('postponeBtn')||$('introSel')||$('sheetDone'); if(f) f.focus();
 });
 $('sheetBody').addEventListener('change',e=>{
+  const ni=e.target.closest('select[data-intro]');
+  if(ni){ if(ni.value) changeIntro(ni.dataset.intro,ni.value); const f=$('introSel')||$('sheetDone'); if(f) f.focus(); return; }
   const o=e.target.closest('select[data-ov]'); if(!o) return;
   const date=o.dataset.ov, k=o.dataset.slot;
   (S.over[date]=S.over[date]||{})[k]=o.value;
@@ -940,7 +1086,7 @@ $('sheetDone').addEventListener('click',closeSheet);
 $('sheetClose').addEventListener('click',closeSheet);
 $('sheetReset').addEventListener('click',()=>{ if(EDIT){ delete S.over[EDIT]; save(); render(); $('sheetDone').focus(); } });
 $('sheetBg').addEventListener('click',e=>{ if(e.target===$('sheetBg')) closeSheet(); });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape' && EDIT) closeSheet(); });
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape') return; if(!$('toast').hidden && TOAST_ACTIONS.length>1) hideToast(); else if(EDIT) closeSheet(); });
 $('bnav').addEventListener('click',e=>{ const b=e.target.closest('button[data-view]'); if(b) setView(b.dataset.view); });
 $('progBtn').addEventListener('click',()=>{
   const open=$('top').classList.toggle('open');
