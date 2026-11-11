@@ -603,15 +603,21 @@ function simulate(P){
   const known=new Set(Object.keys(S.tasted).filter(id=>S.tasted[id]&&F[id]));
   const vstock={...S.stock}, last={};
   const days=[];
+  // seen = nombre de fois où le nouvel aliment du bloc a vraiment été au menu.
+  // Un jour où on l'a enlevé (« Aucun ») ne compte pas : il ne devient « connu » qu'une fois présenté.
+  let seen=0;
   for(let d=0;d<total;d++){
     const date=iso(addDays(start,d));
-    const block=Math.floor(d/R), rep=d%R;
+    const block=Math.floor(d/R);
+    if(d%R===0) seen=0;
+    const rep=seen;
     const intro = block<N ? F[S.plan[block]] : null;
-    if(intro) known.add(intro.id);
+    const served=menu=>{ if(intro && [...menu.midi,...menu.gouter].some(it=>it.id===intro.id)){ seen++; known.add(intro.id); } };
     const done=S.done[date];
     if(done && done.menu){
       const menu={midi:done.menu.midi.filter(it=>F[it.id]),gouter:done.menu.gouter.filter(it=>F[it.id])};
       [...menu.midi,...menu.gouter].forEach(it=>last[it.id]=d);
+      served(menu);
       days.push({d,date,intro,rep,menu,done:true});
       continue;
     }
@@ -653,7 +659,9 @@ function simulate(P){
       if(intro && it.id===intro.id){ it.intro=true; it.rep=rep; }
       if(useStock && vstock[it.id]>0){ vstock[it.id]--; it.stock=true; }
     });
-    days.push({d,date,intro,rep,menu:{midi,gouter},done:false,known:[...known],edited:Object.keys(ov).length>0});
+    const opts=[...known]; if(intro && !known.has(intro.id)) opts.push(intro.id);
+    served({midi,gouter});
+    days.push({d,date,intro,rep,menu:{midi,gouter},done:false,known:opts,edited:Object.keys(ov).length>0});
   }
   return days;
 }
@@ -716,7 +724,7 @@ function renderToday(P){
   if(!di){ $('todayView').innerHTML='<div class="t-card"><p class="t-msg">Le plan est terminé. Ajoutez des aliments au plan depuis l’onglet « Goûtés », ou changez la date de début.</p></div>'; return; }
   const dt=parse(di.date);
   const note = di.intro && NOTES[di.intro.id];
-  const swap = canChangeIntro(di) ? `<button type="button" class="link" data-edit="${di.date}">Pas disponible ? Remplacer ou reporter</button>` : '';
+  const swap = canChangeIntro(di) ? `<button type="button" class="link" data-edit="${di.date}">Pas disponible ? Remplacer, reporter ou retirer</button>` : '';
   const newBlock = di.intro && !di.done && [...di.menu.midi,...di.menu.gouter].some(it=>it.intro)
     ? `<div class="t-new${di.intro.al?' allergen':''}"><b>${esc(di.intro.n)} ${repLabel(di.rep)}</b>${note?`<p>${esc(note)}</p>`:''}${swap}</div>` : '';
   const canServe = di.date<=TODAY;
@@ -793,11 +801,28 @@ function introSection(di){
   return `<div class="intro-box">
     <span class="meal-l">Nouvel aliment</span>
     <div class="intro-cur"><i class="dot ${dotOf(cur.id)}"></i>${esc(cur.n)} ${repLabel(di.rep)}</div>
-    <p class="hint">Pas disponible ? Choisissez un autre nouvel aliment ou reportez celui-ci : les menus se recalculent. * = allergène majeur.</p>
+    <p class="hint">Pas disponible ? Choisissez un autre nouvel aliment, reportez celui-ci ou retirez-le du plan : les menus se recalculent. * = allergène majeur.</p>
     <div class="edit-row"><label for="introSel">Remplacer « ${esc(cur.n)} » par…</label>
       <select id="introSel" data-intro="${di.date}"><option value="" selected>Choisir un aliment</option>${opts}</select></div>
     ${later?`<button type="button" class="btn ghost" id="postponeBtn" data-postpone="${di.date}">Reporter « ${esc(cur.n)} » au ${later}</button>`:''}
+    <button type="button" class="btn ghost" id="dropBtn" data-drop="${di.date}" style="margin-top:8px">Retirer « ${esc(cur.n)} » du plan</button>
   </div>`;
+}
+// Retire le nouvel aliment du bloc : il n'est plus proposé du tout (ni nouveau, ni 2e/3e fois) ; les suivants avancent
+function dropIntro(date){
+  const di=DAYS.find(x=>x.date===date); if(!canChangeIntro(di)) return;
+  const b=blockOf(di), old=S.plan[b];
+  const prev={plan:[...S.plan],over:JSON.parse(JSON.stringify(S.over))}, before=menuSig();
+  S.plan.splice(b,1);
+  Object.keys(S.over).forEach(d=>{
+    if(d<TODAY || S.done[d]) return;
+    const o=S.over[d]; Object.keys(o).forEach(k=>{ if(o[k]===old) delete o[k]; });
+    if(!Object.keys(o).length) delete S.over[d];
+  });
+  save(); render(); markChanged(before);
+  const nw=S.plan[b];
+  toast(`Retiré du plan : ${F[old].n}${nw?`. Nouvel aliment : ${F[nw].n}`:''}. Vous pourrez le remettre avec « + au plan » dans « Goûtés ».`,
+    [{label:'Annuler',fn:()=>{ const bf=menuSig(); S.plan=prev.plan; S.over=prev.over; save(); render(); markChanged(bf); toast('Modification annulée.'); }}]);
 }
 // id = aliment de remplacement ; sans id, on échange avec le bloc suivant
 function changeIntro(date,id){
@@ -987,7 +1012,10 @@ function renderChecklist(P){
       const f=F[id], st=status(id,P), i=S.plan.indexOf(id);
       const auto = (st==='ok'||st==='cur') && !S.tasted[id];
       let right='';
-      if(st==='cur') right='<span class="st cur">en cours</span>';
+      if(st==='cur'){
+        const td=DAYS.find(x=>x.date===TODAY);
+        right='<span class="st cur">en cours</span>'+(td&&td.intro&&td.intro.id===id&&canChangeIntro(td)?`<button type="button" class="link" data-drop="${td.date}" aria-label="Retirer ${esc(f.n)} du plan">retirer</button>`:'');
+      }
       else if(auto) right='<span class="st ok">via le plan</span>';
       else if(st==='plan') right=`<span class="st">${nice(addDays(P.start,i*P.R))}</span><button type="button" class="link" data-unplan="${id}" aria-label="Retirer ${esc(f.n)} du plan">retirer</button>`;
       else if(st==='todo' && !f.np) right=`<button type="button" class="link" data-plan="${id}">+ au plan</button>`;
@@ -1084,6 +1112,8 @@ $('todayView').addEventListener('click',e=>{
   if(e.target.closest('button[data-refresh]')){ refreshMenu(); if($('toast').hidden||TOAST_ACTIONS.length<2) focusRefresh(); }
 });
 $('sheetBody').addEventListener('click',e=>{
+  const dr=e.target.closest('button[data-drop]');
+  if(dr){ dropIntro(dr.dataset.drop); const f=$('introSel')||$('sheetDone'); if(f) f.focus(); return; }
   const p=e.target.closest('button[data-postpone]'); if(!p) return;
   changeIntro(p.dataset.postpone);
   const f=$('postponeBtn')||$('introSel')||$('sheetDone'); if(f) f.focus();
@@ -1125,6 +1155,7 @@ $('checklist').addEventListener('change',e=>{
   save(); render();
 });
 $('checklist').addEventListener('click',e=>{
+  const dr=e.target.closest('button[data-drop]'); if(dr){ dropIntro(dr.dataset.drop); return; }
   const add=e.target.closest('button[data-plan]'), rm=e.target.closest('button[data-unplan]');
   if(add){ if(!S.plan.includes(add.dataset.plan)) S.plan.push(add.dataset.plan); save(); render(); }
   if(rm){ const i=S.plan.indexOf(rm.dataset.unplan), P=planInfo(); if(i>=P.introduced){ S.plan.splice(i,1); save(); render(); } }
