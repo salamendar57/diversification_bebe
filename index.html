@@ -633,6 +633,7 @@ function simulate(P){
       fec: slot('fec')||pick('fec'),
       xm: slot('xm')||(d%3===1?pick('xm'):null),
       fruit: slot('fruit')||pick('fruit'),
+      fruit2: null, fruit3: null,
       lait: slot('lait')||(d%2===0?pick('lait'):null),
       xg: slot('xg')||(d%3===0?pick('xg'):null)
     };
@@ -641,7 +642,9 @@ function simulate(P){
     Object.keys(ov).forEach(k=>{ if(k in sel && (ov[k]==='' || F[ov[k]])) sel[k]=ov[k]||null; });
     const mk=k=>sel[k]?[{id:sel[k],slot:k}]:[];
     const midi=[...mk('leg'),...mk('prot'),...mk('fec'),...mk('xm')];
-    const gouter=[...mk('fruit'),...mk('lait'),...mk('xg')];
+    // Plusieurs fruits possibles au goûter (sans doublon)
+    const fruits=[...mk('fruit'),...mk('fruit2'),...mk('fruit3')].filter((it,i,a)=>a.findIndex(x=>x.id===it.id)===i);
+    const gouter=[...fruits,...mk('lait'),...mk('xg')];
     [...midi,...gouter].forEach(it=>{
       last[it.id]=d;
       if(intro && it.id===intro.id){ it.intro=true; it.rep=rep; }
@@ -664,11 +667,13 @@ function itemHTML(it){
 }
 
 // Édition d'un jour : un menu déroulant par place, avec les aliments déjà goûtés à cette date
-const SLOT_LABEL={leg:'Légume',prot:'Protéine',fec:'Féculent',xm:'Complément',fruit:'Fruit',lait:'Laitage',xg:'Complément'};
+const SLOT_LABEL={leg:'Légume',prot:'Protéine',fec:'Féculent',xm:'Complément',fruit:'Fruit',fruit2:'2e fruit',fruit3:'3e fruit',lait:'Laitage',xg:'Complément'};
+const POOL=k=>k==='fruit2'||k==='fruit3'?'fruit':k;
 let EDIT=null;
 function editRow(di,k){
   const cur=[...di.menu.midi,...di.menu.gouter].find(it=>it.slot===k);
-  const ids=di.known.filter(id=>F[id].slot===k && !F[id].np).sort((a,b)=>F[a].n.localeCompare(F[b].n,'fr'));
+  const taken=di.menu.gouter.filter(it=>it.slot!==k && POOL(it.slot)===POOL(k)).map(it=>it.id);
+  const ids=di.known.filter(id=>F[id].slot===POOL(k) && !F[id].np && !taken.includes(id)).sort((a,b)=>F[a].n.localeCompare(F[b].n,'fr'));
   if(cur && !ids.includes(cur.id)) ids.unshift(cur.id);
   const opts=ids.map(id=>{
     const st=S.stock[id]>0?` (stock : ${S.stock[id]})`:'';
@@ -676,7 +681,7 @@ function editRow(di,k){
     return `<option value="${id}" ${cur&&cur.id===id?'selected':''}>${esc(F[id].n)}${nw}${st}</option>`;
   }).join('');
   const sid=`ov-${di.date}-${k}`;
-  return `<div class="edit-row"><label for="${sid}"><i class="dot ${cls(k==='lait'?'lait':k)}"></i>${SLOT_LABEL[k]}</label>
+  return `<div class="edit-row"><label for="${sid}"><i class="dot ${cls(k==='lait'?'lait':POOL(k))}"></i>${SLOT_LABEL[k]}</label>
     <select id="${sid}" data-ov="${di.date}" data-slot="${k}"><option value="" ${cur?'':'selected'}>Aucun</option>${opts}</select></div>`;
 }
 
@@ -743,6 +748,11 @@ function closeSheet(){
   EDIT=null; $('sheetBg').hidden=true; document.body.style.overflow=''; document.body.classList.remove('modal');
   if(lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
 }
+// Le 3e fruit n'apparaît qu'une fois le 2e choisi
+function gouterSlots(di){
+  const has=k=>di.menu.gouter.some(it=>it.slot===k);
+  return ['fruit','fruit2',...(has('fruit2')||has('fruit3')?['fruit3']:[]),'lait','xg'];
+}
 function renderSheet(){
   if(!EDIT) return;
   const di=DAYS.find(x=>x.date===EDIT);
@@ -750,7 +760,7 @@ function renderSheet(){
   const dt=parse(di.date);
   $('sheetTitle').textContent=`Menu du ${DOW[dt.getDay()]} ${nice(dt)}`;
   $('sheetBody').innerHTML=introSection(di)+`<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
-    <div class="meal" style="margin-top:14px"><span class="meal-l">Goûter</span>${['fruit','lait','xg'].map(k=>editRow(di,k)).join('')}</div>`;
+    <div class="meal" style="margin-top:14px"><span class="meal-l">Goûter</span>${gouterSlots(di).map(k=>editRow(di,k)).join('')}</div>`;
   $('sheetReset').hidden=!di.edited;
 }
 
