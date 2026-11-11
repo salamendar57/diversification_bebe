@@ -629,6 +629,7 @@ function simulate(P){
     const slot=s=> intro && intro.slot===s ? intro.id : null;
     const sel={
       leg: slot('leg')||pick('leg'),
+      leg2: null, leg3: null,
       prot: slot('prot')||pick('prot'),
       fec: slot('fec')||pick('fec'),
       xm: slot('xm')||(d%3===1?pick('xm'):null),
@@ -641,9 +642,11 @@ function simulate(P){
     const ov=S.over[date]||{};
     Object.keys(ov).forEach(k=>{ if(k in sel && (ov[k]==='' || F[ov[k]])) sel[k]=ov[k]||null; });
     const mk=k=>sel[k]?[{id:sel[k],slot:k}]:[];
-    const midi=[...mk('leg'),...mk('prot'),...mk('fec'),...mk('xm')];
-    // Plusieurs fruits possibles au goûter (sans doublon)
-    const fruits=[...mk('fruit'),...mk('fruit2'),...mk('fruit3')].filter((it,i,a)=>a.findIndex(x=>x.id===it.id)===i);
+    // Plusieurs légumes possibles le midi et plusieurs fruits au goûter (sans doublon)
+    const uniq=a=>a.filter((it,i)=>a.findIndex(x=>x.id===it.id)===i);
+    const legs=uniq([...mk('leg'),...mk('leg2'),...mk('leg3')]);
+    const midi=[...legs,...mk('prot'),...mk('fec'),...mk('xm')];
+    const fruits=uniq([...mk('fruit'),...mk('fruit2'),...mk('fruit3')]);
     const gouter=[...fruits,...mk('lait'),...mk('xg')];
     [...midi,...gouter].forEach(it=>{
       last[it.id]=d;
@@ -667,12 +670,12 @@ function itemHTML(it){
 }
 
 // Édition d'un jour : un menu déroulant par place, avec les aliments déjà goûtés à cette date
-const SLOT_LABEL={leg:'Légume',prot:'Protéine',fec:'Féculent',xm:'Complément',fruit:'Fruit',fruit2:'2e fruit',fruit3:'3e fruit',lait:'Laitage',xg:'Complément'};
-const POOL=k=>k==='fruit2'||k==='fruit3'?'fruit':k;
+const SLOT_LABEL={leg:'Légume',leg2:'2e légume',leg3:'3e légume',prot:'Protéine',fec:'Féculent',xm:'Complément',fruit:'Fruit',fruit2:'2e fruit',fruit3:'3e fruit',lait:'Laitage',xg:'Complément'};
+const POOL=k=>k.replace(/[23]$/,'');
 let EDIT=null;
 function editRow(di,k){
   const cur=[...di.menu.midi,...di.menu.gouter].find(it=>it.slot===k);
-  const taken=di.menu.gouter.filter(it=>it.slot!==k && POOL(it.slot)===POOL(k)).map(it=>it.id);
+  const taken=[...di.menu.midi,...di.menu.gouter].filter(it=>it.slot!==k && POOL(it.slot)===POOL(k)).map(it=>it.id);
   const ids=di.known.filter(id=>F[id].slot===POOL(k) && !F[id].np && !taken.includes(id)).sort((a,b)=>F[a].n.localeCompare(F[b].n,'fr'));
   if(cur && !ids.includes(cur.id)) ids.unshift(cur.id);
   const opts=ids.map(id=>{
@@ -748,18 +751,20 @@ function closeSheet(){
   EDIT=null; $('sheetBg').hidden=true; document.body.style.overflow=''; document.body.classList.remove('modal');
   if(lastFocus && document.body.contains(lastFocus)) lastFocus.focus();
 }
-// Le 3e fruit n'apparaît qu'une fois le 2e choisi
-function gouterSlots(di){
-  const has=k=>di.menu.gouter.some(it=>it.slot===k);
-  return ['fruit','fruit2',...(has('fruit2')||has('fruit3')?['fruit3']:[]),'lait','xg'];
+// Le 3e légume / 3e fruit n'apparaît qu'une fois le 2e choisi
+function multi(di,k){
+  const has=s=>[...di.menu.midi,...di.menu.gouter].some(it=>it.slot===s);
+  return [k,k+'2',...(has(k+'2')||has(k+'3')?[k+'3']:[])];
 }
+const midiSlots=di=>[...multi(di,'leg'),'prot','fec','xm'];
+const gouterSlots=di=>[...multi(di,'fruit'),'lait','xg'];
 function renderSheet(){
   if(!EDIT) return;
   const di=DAYS.find(x=>x.date===EDIT);
   if(!di || di.done){ closeSheet(); return; }
   const dt=parse(di.date);
   $('sheetTitle').textContent=`Menu du ${DOW[dt.getDay()]} ${nice(dt)}`;
-  $('sheetBody').innerHTML=introSection(di)+`<div class="meal"><span class="meal-l">Midi</span>${['leg','prot','fec','xm'].map(k=>editRow(di,k)).join('')}</div>
+  $('sheetBody').innerHTML=introSection(di)+`<div class="meal"><span class="meal-l">Midi</span>${midiSlots(di).map(k=>editRow(di,k)).join('')}</div>
     <div class="meal" style="margin-top:14px"><span class="meal-l">Goûter</span>${gouterSlots(di).map(k=>editRow(di,k)).join('')}</div>`;
   $('sheetReset').hidden=!di.edited;
 }
