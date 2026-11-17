@@ -612,7 +612,12 @@ function simulate(P){
     if(d%R===0) seen=0;
     const rep=seen;
     const intro = block<N ? F[S.plan[block]] : null;
-    const served=menu=>{ if(intro && [...menu.midi,...menu.gouter].some(it=>it.id===intro.id)){ seen++; known.add(intro.id); } };
+    // Tout ce qui a été au menu devient connu (y compris un aliment jamais goûté choisi à la main)
+    const served=menu=>{
+      const ids=[...menu.midi,...menu.gouter].map(it=>it.id);
+      if(intro && ids.includes(intro.id)) seen++;
+      ids.forEach(id=>known.add(id));
+    };
     const done=S.done[date];
     if(done && done.menu){
       const menu={midi:done.menu.midi.filter(it=>F[it.id]),gouter:done.menu.gouter.filter(it=>F[it.id])};
@@ -657,6 +662,7 @@ function simulate(P){
     [...midi,...gouter].forEach(it=>{
       last[it.id]=d;
       if(intro && it.id===intro.id){ it.intro=true; it.rep=rep; }
+      else if(!known.has(it.id)) it.first=true;
       if(useStock && vstock[it.id]>0){ vstock[it.id]--; it.stock=true; }
     });
     const opts=[...known]; if(intro && !known.has(intro.id)) opts.push(intro.id);
@@ -674,23 +680,28 @@ const dotOf=id=>cls(F[id].slot==='lait'?'lait':F[id].c);
 const repLabel=r=>r===0?'<b class="tag new">Nouveau</b>':`<b class="tag rep">${r+1}e fois</b>`;
 function itemHTML(it){
   const f=F[it.id];
-  return `<div class="item${it.intro&&it.rep===0?' is-new':''}"><i class="dot ${dotOf(it.id)}"></i><span class="name">${esc(f.n)}</span>${it.intro?repLabel(it.rep):''}${it.stock?'<b class="tag stock">stock</b>':''}</div>`;
+  return `<div class="item${it.intro&&it.rep===0?' is-new':''}"><i class="dot ${dotOf(it.id)}"></i><span class="name">${esc(f.n)}</span>${it.intro?repLabel(it.rep):it.first?'<b class="tag new">1re fois</b>':''}${it.stock?'<b class="tag stock">stock</b>':''}</div>`;
 }
 
-// Édition d'un jour : un menu déroulant par place, avec les aliments déjà goûtés à cette date
+// Édition d'un jour : un menu déroulant par place, avec tous les aliments de la catégorie
+// (déjà goûtés à cette date d'abord, puis ceux jamais goûtés)
 const SLOT_LABEL={leg:'Légume',leg2:'2e légume',leg3:'3e légume',prot:'Protéine',fec:'Féculent',xm:'Complément',fruit:'Fruit',fruit2:'2e fruit',fruit3:'3e fruit',lait:'Laitage',xg:'Complément'};
 const POOL=k=>k.replace(/[23]$/,'');
 let EDIT=null;
 function editRow(di,k){
   const cur=[...di.menu.midi,...di.menu.gouter].find(it=>it.slot===k);
   const taken=[...di.menu.midi,...di.menu.gouter].filter(it=>it.slot!==k && POOL(it.slot)===POOL(k)).map(it=>it.id);
-  const ids=di.known.filter(id=>F[id].slot===POOL(k) && !F[id].np && !taken.includes(id)).sort((a,b)=>F[a].n.localeCompare(F[b].n,'fr'));
-  if(cur && !ids.includes(cur.id)) ids.unshift(cur.id);
-  const opts=ids.map(id=>{
+  const byName=(a,b)=>F[a].n.localeCompare(F[b].n,'fr');
+  const all=ORDER.filter(id=>F[id].slot===POOL(k) && !F[id].np && !taken.includes(id));
+  if(cur && !all.includes(cur.id)) all.unshift(cur.id);
+  const isKnown=id=>S.tasted[id] || (di.known.includes(id) && !(di.intro && di.intro.id===id && di.rep===0));
+  const opt=id=>{
     const st=S.stock[id]>0?` (stock : ${S.stock[id]})`:'';
-    const nw=di.intro&&di.intro.id===id?' (nouveau)':'';
-    return `<option value="${id}" ${cur&&cur.id===id?'selected':''}>${esc(F[id].n)}${nw}${st}</option>`;
-  }).join('');
+    const nw=di.intro&&di.intro.id===id?' (nouveau du jour)':'';
+    return `<option value="${id}" ${cur&&cur.id===id?'selected':''}>${esc(F[id].n)}${F[id].al&&!isKnown(id)?' *':''}${nw}${st}</option>`;
+  };
+  const grp=(label,ids)=>ids.length?`<optgroup label="${label}">${ids.sort(byName).map(opt).join('')}</optgroup>`:'';
+  const opts=grp('Déjà goûtés',all.filter(isKnown))+grp('Jamais goûtés',all.filter(id=>!isKnown(id)));
   const sid=`ov-${di.date}-${k}`;
   return `<div class="edit-row"><label for="${sid}"><i class="dot ${cls(k==='lait'?'lait':POOL(k))}"></i>${SLOT_LABEL[k]}</label>
     <select id="${sid}" data-ov="${di.date}" data-slot="${k}"><option value="" ${cur?'':'selected'}>Aucun</option>${opts}</select></div>`;
@@ -1002,6 +1013,9 @@ function renderChecklist(P){
     if(CL_F==='plan') return st==='plan'||st==='cur';
     return true;
   };
+  // Aliments au menu d'un jour passé (non coché « servi ») : on le signale pour qu'on puisse les cocher
+  const onMenu={};
+  DAYS.filter(x=>x.date<=TODAY && !x.done).forEach(x=>[...x.menu.midi,...x.menu.gouter].forEach(it=>{ onMenu[it.id]=x.date; }));
   let shown=0;
   const html=CATS.map(([c,label,items])=>{
     const ok=items.filter(([id])=>status(id,P)==='ok').length;
@@ -1019,12 +1033,13 @@ function renderChecklist(P){
       else if(auto) right='<span class="st ok">via le plan</span>';
       else if(st==='plan') right=`<span class="st">${nice(addDays(P.start,i*P.R))}</span><button type="button" class="link" data-unplan="${id}" aria-label="Retirer ${esc(f.n)} du plan">retirer</button>`;
       else if(st==='todo' && !f.np) right=`<button type="button" class="link" data-plan="${id}">+ au plan</button>`;
+      if((st==='todo'||st==='plan') && onMenu[id]) right=`<span class="st cur">au menu le ${nice(parse(onMenu[id]))} · goûté ?</span>`+right;
       return `<li class="cl-item"><label><input type="checkbox" data-taste="${id}" ${st==='ok'||st==='cur'?'checked':''} ${auto?'disabled':''}>
         <span class="nm">${esc(f.n)}${f.al?' <span class="star" title="Allergène majeur">*</span>':''}</span></label>${right}</li>`;
     }).join('');
     return `<section class="cl-sec"><h2><i class="dot ${cls(c)}"></i>${label}<small>${ok}/${items.length} goûtés</small></h2><ul class="cl-grid">${rows}</ul></section>`;
   }).join('');
-  $('checklist').innerHTML=`<p class="cl-note">Cochez ce que bébé a déjà goûté. Les aliments cochés sortent du plan. « + au plan » ajoute un aliment à la fin du calendrier. * = allergène majeur.</p>`
+  $('checklist').innerHTML=`<p class="cl-note">Cochez ce que bébé a déjà goûté. Les aliments cochés sortent du plan, et marquer un repas « servi » coche ses aliments. « + au plan » ajoute un aliment à la fin du calendrier. * = allergène majeur.</p>`
     +(shown?html:`<p class="cl-empty">Aucun aliment ne correspond${q?` à « ${esc(CL_Q.trim())} »`:''}.</p>`);
 }
 
@@ -1078,10 +1093,22 @@ function toggleServe(date,on){
     const menu=JSON.parse(JSON.stringify(di.menu));
     const used=[...menu.midi,...menu.gouter].filter(it=>it.stock).map(it=>it.id);
     used.forEach(id=>{ if(S.stock[id]>0){S.stock[id]--; if(!S.stock[id]) delete S.stock[id];} });
-    S.done[date]={menu,used};
+    // Les aliments servis sont cochés « goûtés » (et sortent du plan s'ils y étaient plus loin)
+    const P=planInfo(), tasted=[], unplanned=[];
+    [...menu.midi,...menu.gouter].forEach(({id})=>{
+      if(S.tasted[id]) return;
+      S.tasted[id]=true; tasted.push(id);
+      const i=S.plan.indexOf(id);
+      if(i>=P.introduced){ S.plan.splice(i,1); unplanned.push([id,i]); }
+    });
+    S.done[date]={menu,used,tasted,unplanned};
   }else{
     const prev=S.done[date];
     if(prev) (prev.used||[]).forEach(id=>S.stock[id]=(S.stock[id]||0)+1);
+    if(prev){
+      (prev.tasted||[]).forEach(id=>delete S.tasted[id]);
+      (prev.unplanned||[]).slice().reverse().forEach(([id,i])=>{ if(!S.plan.includes(id)) S.plan.splice(Math.min(i,S.plan.length),0,id); });
+    }
     delete S.done[date];
   }
   save(); render();
